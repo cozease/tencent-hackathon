@@ -5,13 +5,17 @@ interface GameEvent {
   id: number
   name: string
   content: string
+  sight: string
   choice1: string
-  choice2: string
   result1: string
-  result2: string
   possibility1: string
+  reward1: number
+  next1: number
+  choice2: string
+  result2: string
   possibility2: string
-  sight: 'forest' | 'mountain' | 'river'
+  reward2: number
+  next2: number
 }
 
 // 简单的 CSV 解析函数（处理逗号在引号内的情况）
@@ -46,7 +50,7 @@ export default defineEventHandler(async () => {
     const csvContent = readFileSync(csvPath, 'utf-8')
     
     // 解析 CSV
-    const lines = csvContent.split('\n').filter(line => line.trim())
+    const lines = csvContent.split('\n').filter((line: string) => line.trim())
     const headers = parseCSVLine(lines[0])
     
     const events: GameEvent[] = []
@@ -55,19 +59,23 @@ export default defineEventHandler(async () => {
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i])
       
-      // 确保有足够的字段
-      if (values.length >= 10) {
+    // 确保有足够的字段
+    if (values.length >= 14) {
         const event: GameEvent = {
           id: parseInt(values[0]),
           name: values[1],
           content: values[2],
-          choice1: values[3],
-          choice2: values[4],
+          sight: values[3],
+          choice1: values[4],
           result1: values[5],
-          result2: values[6],
-          possibility1: values[7],
-          possibility2: values[8],
-          sight: values[9].trim() as 'forest' | 'mountain' | 'river'
+          possibility1: values[6],
+          reward1: parseInt(values[7]) || 0,
+          next1: parseInt(values[8]) || 0,
+          choice2: values[9],
+          result2: values[10],
+          possibility2: values[11],
+          reward2: parseInt(values[12]) || 0,
+          next2: parseInt(values[13]) || 0
         }
         
         events.push(event)

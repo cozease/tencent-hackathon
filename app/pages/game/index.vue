@@ -1,437 +1,646 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed, watch } from 'vue'
-import { useGameStore } from '~/stores/game'
+import { ref, onMounted, nextTick, computed, watch } from "vue";
+import { useGameStore } from "~/stores/game";
 
 // 消息类型定义
 interface Message {
-  id: number
-  type: 'narrator' | 'npc' | 'player' | 'scene' | 'choice' | 'event'
-  speaker?: string
-  content: string
-  avatar?: string
-  image?: string
-  choices?: Choice[]
-  timestamp: Date
+  id: number;
+  type: "narrator" | "npc" | "player" | "scene" | "choice" | "event" | "system";
+  speaker?: string;
+  content: string;
+  avatar?: string;
+  image?: string;
+  choices?: Choice[];
+  timestamp: Date;
 }
 
 interface Choice {
-  id: string
-  label: string
-  description: string
-  action?: () => void
+  id: string;
+  label: string;
+  description: string;
+  action?: () => void;
 }
 
 // 事件定义
 interface GameEvent {
-  id: number
-  name: string
-  content: string
-  choice1: string
-  choice2: string
-  result1: string
-  result2: string
-  possibility1: string
-  possibility2: string
-  sight: 'forest' | 'mountain' | 'river'
+  id: number;
+  name: string;
+  content: string;
+  sight: string;
+  choice1: string;
+  result1: string;
+  possibility1: string;
+  reward1: number;
+  next1: number;
+  choice2: string;
+  result2: string;
+  possibility2: string;
+  reward2: number;
+  next2: number;
+}
+
+interface CollectionItem {
+  id: number;
+  name: string;
+  description: string;
+  rarity: string;
+  imageFile?: string;
 }
 
 // 事件数据
-const events = ref<GameEvent[]>([])
-const eventsLoading = ref(true)
+const events = ref<GameEvent[]>([]);
+const eventsLoading = ref(true);
+
+// 收集数据
+const collections = ref<CollectionItem[]>([]);
+const collectionsLoaded = ref(false);
 
 // 使用 i18n
-const { locale, t } = useI18n()
-const localePath = useLocalePath()
+const { locale, t } = useI18n();
+const localePath = useLocalePath();
 
 // 使用游戏商店
-const gameStore = useGameStore()
+const gameStore = useGameStore();
 
 // 切换语言
 const switchLanguage = async () => {
-  const targetLocale = locale.value === 'zh' ? 'en' : 'zh'
-  await navigateTo(localePath('/game', targetLocale))
-}
+  const targetLocale = locale.value === "zh" ? "en" : "zh";
+  await navigateTo(localePath("/game", targetLocale));
+};
 
 // 获取当前语言显示名称
 const currentLanguageName = computed(() => {
-  return locale.value === 'zh' ? '中文' : 'EN'
-})
+  return locale.value === "zh" ? "中文" : "EN";
+});
 
 // 游戏状态
-const messages = ref<Message[]>([])
-const isTyping = ref(false)
-const currentChoices = ref<Choice[]>([])
-const showChoices = ref(false)
-const messageContainer = ref<HTMLElement>()
-const gameStarted = ref(false)
-const currentEventIndex = ref(-1)
-const currentEvent = ref<GameEvent | null>(null)
-const currentBackgroundSight = ref<'forest' | 'mountain' | 'river' | 'start'>('start')
-const showEventImage = ref(false)
+const messages = ref<Message[]>([]);
+const isTyping = ref(false);
+const currentChoices = ref<Choice[]>([]);
+const showChoices = ref(false);
+const messageContainer = ref<HTMLElement>();
+const gameStarted = ref(false);
+const currentEvent = ref<GameEvent | null>(null);
+const currentBackgroundSight = ref<string>("start");
+const showEventImage = ref(false);
+
+// 收集弹窗状态
+const collectionToast = ref({
+  show: false,
+  name: "",
+  imageFile: "",
+});
 
 // 自动滚动到底部
 const scrollToBottom = () => {
   nextTick(() => {
     if (messageContainer.value) {
-      messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+      messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
     }
-  })
-}
+  });
+};
 
 // 监听选项显示状态，自动滚动
 watch(showChoices, (newVal) => {
   if (newVal) {
-    scrollToBottom()
+    scrollToBottom();
   }
-})
+});
 
 // 添加消息
-const addMessage = async (message: Omit<Message, 'id' | 'timestamp'>, delay = 1000) => {
-  isTyping.value = true
-  
-  await new Promise(resolve => setTimeout(resolve, delay))
-  
+const addMessage = async (
+  message: Omit<Message, "id" | "timestamp">,
+  delay = 1000
+) => {
+  isTyping.value = true;
+
+  await new Promise((resolve) => setTimeout(resolve, delay));
+
   const newMessage: Message = {
     ...message,
     id: Date.now(),
-    timestamp: new Date()
-  }
-  
-  messages.value.push(newMessage)
-  isTyping.value = false
-  scrollToBottom()
-  
+    timestamp: new Date(),
+  };
+
+  messages.value.push(newMessage);
+  isTyping.value = false;
+  scrollToBottom();
+
   // 如果有选项，显示选项
   if (message.choices && message.choices.length > 0) {
-    currentChoices.value = message.choices
-    showChoices.value = true
+    currentChoices.value = message.choices;
+    showChoices.value = true;
   }
-}
+};
 
 // 处理玩家选择
 const handleChoice = async (choice: Choice) => {
   // 隐藏选项
-  showChoices.value = false
-  currentChoices.value = []
-  
+  showChoices.value = false;
+  currentChoices.value = [];
+
   // 如果是事件选择，直接执行action（action内部会处理计数和消息）
   if (currentEvent.value) {
     if (choice.action) {
-      await choice.action()
+      await choice.action();
     }
-    return
+    return;
   }
-  
+
   // 普通选择的处理
   // 增加选择次数
-  gameStore.incrementChoiceCount()
-  
+  gameStore.incrementChoiceCount();
+
   // 添加玩家消息
-  await addMessage({
-    type: 'player',
-    content: choice.description,
-    speaker: t('story.characters.player')
-  }, 300)
-  
+  await addMessage(
+    {
+      type: "player",
+      content: choice.description,
+      speaker: t("story.characters.player"),
+    },
+    300
+  );
+
   // 执行选项的动作
   if (choice.action) {
-    choice.action()
+    choice.action();
   }
-}
+};
 
 // 开始游戏序列
 const startGameSequence = async () => {
-  gameStarted.value = true
-  
+  gameStarted.value = true;
+
   // 如果是第一次玩，给一些初始金币
   if (gameStore.coins === 0) {
-    gameStore.addCoins(100)
+    gameStore.addCoins(100);
   }
-  
+
   // 场景描述 - 开场动画
-  await addMessage({
-    type: 'scene',
-    content: t('story.intro.scene')
-  }, 2000)
-  
+  await addMessage(
+    {
+      type: "scene",
+      content: t("story.intro.scene"),
+    },
+    2000
+  );
+
   // 标题文字
-  await addMessage({
-    type: 'narrator',
-    content: t('story.intro.welcome')
-  }, 0)//2000)
-  
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.intro.welcome"),
+    },
+    0
+  ); //2000)
+
   // 场景转换
-  await addMessage({
-    type: 'scene',
-    content: t('story.intro.sceneLabel')
-  }, 0)//1500)
-  
+  await addMessage(
+    {
+      type: "scene",
+      content: t("story.intro.sceneLabel"),
+    },
+    0
+  ); //1500)
+
   // 叙述
-  await addMessage({
-    type: 'narrator',
-    content: t('story.intro.arrival1')
-  }, 0)//2000)
-  
-  await addMessage({
-    type: 'narrator',
-    content: t('story.intro.arrival2')
-  }, 0)//2000)
-  
-  await addMessage({
-    type: 'narrator',
-    content: t('story.intro.arrival3')
-  }, 0)//2000)
-  
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.intro.arrival1"),
+    },
+    0
+  ); //2000)
+
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.intro.arrival2"),
+    },
+    0
+  ); //2000)
+
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.intro.arrival3"),
+    },
+    0
+  ); //2000)
+
   // NPC对话
-  await addMessage({
-    type: 'npc',
-    speaker: t('story.characters.zhang'),
-    content: t('story.npc.zhangIntro'),
-    avatar: '👨‍🌾'
-  }, 0)//2000)
-  
-  await addMessage({
-    type: 'narrator',
-    content: t('story.npc.zhangPoint')
-  }, 0)//1500)
-  
-  await addMessage({
-    type: 'npc',
-    speaker: t('story.characters.zhang'),
-    content: t('story.npc.zhangPhilosophy'),
-    avatar: '👨‍🌾'
-  }, 0)//2500)
-  
-  await addMessage({
-    type: 'narrator',
-    content: t('story.npc.zhangEquipment')
-  }, 0)//2000)
-  
-  await addMessage({
-    type: 'npc',
-    speaker: t('story.characters.zhang'),
-    content: t('story.npc.zhangRest'),
-    avatar: '👨‍🌾'
-  }, 0)//2000)
-  
-  await addMessage({
-    type: 'npc',
-    speaker: t('story.characters.zhang'),
-    content: t('story.npc.zhangAdvice'),
-    avatar: '👨‍🌾'
-  }, 0)//2000)
-  
+  await addMessage(
+    {
+      type: "npc",
+      speaker: t("story.characters.zhang"),
+      content: t("story.npc.zhangIntro"),
+      avatar: "👨‍🌾",
+    },
+    0
+  ); //2000)
+
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.npc.zhangPoint"),
+    },
+    0
+  ); //1500)
+
+  await addMessage(
+    {
+      type: "npc",
+      speaker: t("story.characters.zhang"),
+      content: t("story.npc.zhangPhilosophy"),
+      avatar: "👨‍🌾",
+    },
+    0
+  ); //2500)
+
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.npc.zhangEquipment"),
+    },
+    0
+  ); //2000)
+
+  await addMessage(
+    {
+      type: "npc",
+      speaker: t("story.characters.zhang"),
+      content: t("story.npc.zhangRest"),
+      avatar: "👨‍🌾",
+    },
+    0
+  ); //2000)
+
+  await addMessage(
+    {
+      type: "npc",
+      speaker: t("story.characters.zhang"),
+      content: t("story.npc.zhangAdvice"),
+      avatar: "👨‍🌾",
+    },
+    0
+  ); //2000)
+
   // 第一个选择
-  await addMessage({
-    type: 'choice',
-    content: t('story.choices.prompt'),
-    choices: [
-      {
-        id: 'A',
-        label: t('story.choices.checkEquipment.label'),
-        description: t('story.choices.checkEquipment.description'),
-        action: async () => {
-          console.log('选择了检查装备')
-          
-          // 添加后续对话
-          await addMessage({
-            type: 'narrator',
-            content: locale.value === 'zh' 
-              ? '你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！' 
-              : 'You have carefully checked the equipment, everything is ready. Time to start your exploration journey!'
-          }, 1000)
-          
-          // 开始事件序列
-          setTimeout(() => {
-            startEventSequence()
-          }, 2000)
-        }
-      },
-      {
-        id: 'B',
-        label: t('story.choices.askZhang.label'),
-        description: t('story.choices.askZhang.description'),
-        action: async () => {
-          console.log('选择了请教老张')
-          
-          // 添加后续对话
-          await addMessage({
-            type: 'narrator',
-            content: locale.value === 'zh' 
-              ? '你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！' 
-              : 'You have carefully checked the equipment, everything is ready. Time to start your exploration journey!'
-          }, 1000)
-          
-          // 开始事件序列
-          setTimeout(() => {
-            startEventSequence()
-          }, 2000)
-        }
-      },
-      {
-        id: 'C',
-        label: t('story.choices.explore.label'),
-        description: t('story.choices.explore.description'),
-        action: async () => {
-          console.log('选择了探索营地')
-          
-          // 添加后续对话
-          await addMessage({
-            type: 'narrator',
-            content: locale.value === 'zh' 
-              ? '你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！' 
-              : 'You have carefully checked the equipment, everything is ready. Time to start your exploration journey!'
-          }, 1000)
-          
-          // 开始事件序列
-          setTimeout(() => {
-            startEventSequence()
-          }, 2000)
-        }
-      }
-    ]
-  }, 1500)
-}
+  await addMessage(
+    {
+      type: "choice",
+      content: t("story.choices.prompt"),
+      choices: [
+        {
+          id: "A",
+          label: t("story.choices.checkEquipment.label"),
+          description: t("story.choices.checkEquipment.description"),
+          action: async () => {
+            console.log("选择了检查装备");
+
+            // 添加后续对话
+            await addMessage(
+              {
+                type: "narrator",
+                content:
+                  locale.value === "zh"
+                    ? "你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！"
+                    : "You have carefully checked the equipment, everything is ready. Time to start your exploration journey!",
+              },
+              1000
+            );
+
+            // 开始事件序列
+            setTimeout(() => {
+              startEventSequence();
+            }, 2000);
+          },
+        },
+        {
+          id: "B",
+          label: t("story.choices.askZhang.label"),
+          description: t("story.choices.askZhang.description"),
+          action: async () => {
+            console.log("选择了请教老张");
+
+            // 添加后续对话
+            await addMessage(
+              {
+                type: "narrator",
+                content:
+                  locale.value === "zh"
+                    ? "你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！"
+                    : "You have carefully checked the equipment, everything is ready. Time to start your exploration journey!",
+              },
+              1000
+            );
+
+            // 开始事件序列
+            setTimeout(() => {
+              startEventSequence();
+            }, 2000);
+          },
+        },
+        {
+          id: "C",
+          label: t("story.choices.explore.label"),
+          description: t("story.choices.explore.description"),
+          action: async () => {
+            console.log("选择了探索营地");
+
+            // 添加后续对话
+            await addMessage(
+              {
+                type: "narrator",
+                content:
+                  locale.value === "zh"
+                    ? "你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！"
+                    : "You have carefully checked the equipment, everything is ready. Time to start your exploration journey!",
+              },
+              1000
+            );
+
+            // 开始事件序列
+            setTimeout(() => {
+              startEventSequence();
+            }, 2000);
+          },
+        },
+      ],
+    },
+    1500
+  );
+};
 
 // API 响应类型
 interface EventsResponse {
-  success: boolean
-  data?: GameEvent[]
-  error?: string
+  success: boolean;
+  data?: GameEvent[];
+  error?: string;
 }
+
+// 加载收集数据
+const loadCollections = async () => {
+  if (collectionsLoaded.value) return;
+  try {
+    interface CollectionsResponse {
+      success: boolean;
+      data: CollectionItem[];
+      error?: string;
+    }
+    const response = await $fetch<CollectionsResponse>("/api/collections");
+    if (response.success) {
+      collections.value = response.data;
+      collectionsLoaded.value = true;
+    }
+  } catch (error) {
+    console.error("Error fetching collections:", error);
+  }
+};
 
 // 加载事件数据
 const loadEvents = async () => {
   try {
-    const response = await $fetch<EventsResponse>('/api/events')
+    const response = await $fetch<EventsResponse>("/api/events");
     if (response.success && response.data) {
-      events.value = response.data
-      eventsLoading.value = false
+      events.value = response.data;
+      eventsLoading.value = false;
     } else {
-      console.error('Failed to load events:', response.error)
-      eventsLoading.value = false
+      console.error("Failed to load events:", response.error);
+      eventsLoading.value = false;
     }
   } catch (error) {
-    console.error('Error fetching events:', error)
-    eventsLoading.value = false
+    console.error("Error fetching events:", error);
+    eventsLoading.value = false;
   }
-}
+};
 
 // 开始事件序列
+// 游戏流程：老张对话 -> 选择ABC -> 跳转到事件id=2 -> 循环(选择->结果->继续/结束) -> 事件id=1结束
 const startEventSequence = async () => {
   if (eventsLoading.value) {
     // 如果事件还在加载中，等待
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       const checkInterval = setInterval(() => {
         if (!eventsLoading.value) {
-          clearInterval(checkInterval)
-          resolve(true)
+          clearInterval(checkInterval);
+          resolve(true);
         }
-      }, 100)
-    })
+      }, 100);
+    });
   }
-  
+
   if (events.value.length === 0) {
-    console.error('No events available')
-    return
+    console.error("No events available");
+    return;
   }
-  
-  currentEventIndex.value = 0
-  await showEvent(0)
-}
+
+  // 老张对话后跳转到id=2的事件
+  await showEvent(2);
+};
 
 // 显示事件
-const showEvent = async (eventIndex: number) => {
-  if (eventIndex >= events.value.length) {
-    // 所有事件结束
-    await addMessage({
-      type: 'narrator',
-      content: '恭喜你完成了所有探索任务！'
-    }, 1500)
-    return
+const showEvent = async (eventId: number) => {
+  const event = events.value.find((e) => e.id === eventId);
+  if (!event) {
+    console.log("Event not found:", eventId);
+    return;
   }
 
-  const event = events.value[eventIndex]
-  if (!event) return
-  
-  currentEvent.value = event
-  currentEventIndex.value = eventIndex
-  
-  // 切换背景
-  currentBackgroundSight.value = event.sight
-  
+  currentEvent.value = event;
+
+  // 根据事件切换背景
+  if (event.sight && event.sight !== "0") {
+    // 映射中文sight到文件名
+    const sightMap: { [key: string]: string } = {
+      河谷: "river",
+      river: "river",
+      forest: "forest",
+      mountain: "mountain",
+      start: "start",
+    };
+    currentBackgroundSight.value = sightMap[event.sight] || event.sight;
+  }
+
   // 显示事件图片
-  showEventImage.value = true
-  
+  showEventImage.value = true;
+
   // 清空对话窗口
-  messages.value = []
-  showChoices.value = false
-  
+  messages.value = [];
+  showChoices.value = false;
+
   // 显示事件标题
-  await addMessage({
-    type: 'event',
-    speaker: event.name,
-    content: event.content
-  }, 1000)
-  
-  // 显示选择
-  const choices: Choice[] = [
+  await addMessage(
     {
-      id: 'choice1',
-      label: event.choice1,
-      description: event.choice1,
-      action: async () => {
-        await handleEventChoice(1)
-      }
+      type: "event",
+      speaker: event.name,
+      content: event.content,
     },
-    {
-      id: 'choice2',
-      label: event.choice2,
-      description: event.choice2,
-      action: async () => {
-        await handleEventChoice(2)
-      }
+    1000
+  );
+
+  // 特殊处理事件1（结束事件）
+  if (event.id === 1) {
+    // 显示回到首页按钮
+    const choices: Choice[] = [
+      {
+        id: "home",
+        label: "回到首页",
+        description: "结束探险，返回主菜单",
+        action: async () => {
+          await navigateTo(localePath("/"));
+        },
+      },
+    ];
+    currentChoices.value = choices;
+    showChoices.value = true;
+  } else if (event.choice1 && event.choice1 !== "0") {
+    // 显示选项
+    const choices: Choice[] = [];
+
+    if (event.choice1 && event.choice1 !== "0") {
+      choices.push({
+        id: "choice1",
+        label: event.choice1,
+        description: event.choice1,
+        action: async () => {
+          await handleEventChoice(1);
+        },
+      });
     }
-  ]
-  
-  currentChoices.value = choices
-  showChoices.value = true
-}
+
+    if (event.choice2 && event.choice2 !== "0") {
+      choices.push({
+        id: "choice2",
+        label: event.choice2,
+        description: event.choice2,
+        action: async () => {
+          await handleEventChoice(2);
+        },
+      });
+    }
+
+    currentChoices.value = choices;
+    showChoices.value = true;
+  }
+};
 
 // 处理事件选择
 const handleEventChoice = async (choiceNum: number) => {
-  if (!currentEvent.value) return
-  
-  showChoices.value = false
-  currentChoices.value = []
-  
+  if (!currentEvent.value) return;
+
+  showChoices.value = false;
+  currentChoices.value = [];
+
   // 增加选择次数
-  gameStore.incrementChoiceCount()
-  
+  gameStore.incrementChoiceCount();
+
   // 添加玩家选择消息
-  const choice = choiceNum === 1 ? currentEvent.value.choice1 : currentEvent.value.choice2
-  await addMessage({
-    type: 'player',
-    speaker: '你',
-    content: choice
-  }, 500)
-  
-  // 进入下一个事件
+  const choice =
+    choiceNum === 1 ? currentEvent.value.choice1 : currentEvent.value.choice2;
+  await addMessage(
+    {
+      type: "player",
+      speaker: "你",
+      content: choice,
+    },
+    500
+  );
+
+  // 获取选择结果
+  const possibility =
+    choiceNum === 1
+      ? currentEvent.value.possibility1
+      : currentEvent.value.possibility2;
+  const reward =
+    choiceNum === 1 ? currentEvent.value.reward1 : currentEvent.value.reward2;
+  const result =
+    choiceNum === 1 ? currentEvent.value.result1 : currentEvent.value.result2;
+  const nextEventId =
+    choiceNum === 1 ? currentEvent.value.next1 : currentEvent.value.next2;
+
+  // 处理概率奖励
+  const possibilityNum = parseInt(possibility.replace("%", ""));
+  const randomNum = Math.random() * 100;
+
+  if (reward && reward !== 0 && randomNum < possibilityNum) {
+    // 获得卡片
+    const isNewCollection = gameStore.addCard(reward);
+
+    if (isNewCollection) {
+      // 查找卡片信息
+      const collectionItem = collections.value.find((c) => c.id === reward);
+      if (collectionItem) {
+        // 显示收集弹窗
+        collectionToast.value = {
+          show: true,
+          name: collectionItem.name,
+          imageFile: collectionItem.imageFile || "",
+        };
+
+        // 3秒后自动隐藏
+        setTimeout(() => {
+          collectionToast.value.show = false;
+        }, 3000);
+      }
+    }
+  }
+
+  // 显示结果消息
+  if (result && result !== "0") {
+    await addMessage(
+      {
+        type: "narrator",
+        content: result,
+      },
+      1500
+    );
+  }
+
+  // 显示继续探险的选择
+  const adventureChoices: Choice[] = [
+    {
+      id: "end",
+      label: "结束探险",
+      description: "结束今天的探险",
+      action: async () => {
+        showChoices.value = false;
+        await showEvent(1); // 跳转到事件1
+      },
+    },
+    {
+      id: "continue",
+      label: "继续探险",
+      description: "继续前进",
+      action: async () => {
+        showChoices.value = false;
+        if (nextEventId && nextEventId !== 0) {
+          await showEvent(nextEventId);
+        } else {
+          // 如果没有下一个事件，跳转到结束
+          await showEvent(1);
+        }
+      },
+    },
+  ];
+
+  // 延迟显示选择
   setTimeout(() => {
-    showEvent(currentEventIndex.value + 1)
-  }, 1500)
-}
+    currentChoices.value = adventureChoices;
+    showChoices.value = true;
+  }, 1000);
+};
 
 // 组件挂载时自动开始
 onMounted(async () => {
-  // 加载事件数据
-  await loadEvents()
-  
+  // 加载收集和事件数据
+  await Promise.all([loadCollections(), loadEvents()]);
+
   // 延迟一秒后开始游戏序列
   setTimeout(() => {
-    startGameSequence()
-  }, 1000)
-})
+    startGameSequence();
+  }, 1000);
+});
 </script>
 
 <template>
@@ -439,47 +648,63 @@ onMounted(async () => {
     <!-- 背景图片层 -->
     <Transition name="bg-transition">
       <div v-if="gameStarted" class="background-image-layer">
-        <img v-if="currentBackgroundSight === 'start'" src="/start.jpg" alt="Game Background" class="game-bg-image">
-        <img v-else-if="currentBackgroundSight === 'forest'" src="/forest.png" alt="Forest Background" class="game-bg-image">
-        <img v-else-if="currentBackgroundSight === 'mountain'" src="/mountain.png" alt="Mountain Background" class="game-bg-image">
-        <img v-else-if="currentBackgroundSight === 'river'" src="/river.png" alt="River Background" class="game-bg-image">
+        <img
+          v-if="currentBackgroundSight"
+          :src="`/${currentBackgroundSight}.${
+            currentBackgroundSight === 'start' ? 'jpg' : 'png'
+          }`"
+          alt="Game Background"
+          class="game-bg-image"
+        />
         <div class="background-overlay" />
       </div>
     </Transition>
-    
+
     <!-- 事件图片（左侧） -->
     <Transition name="event-image">
       <div v-if="showEventImage && currentEvent" class="event-image-container">
-        <img :src="`/events/${currentEvent.id}.png`" :alt="currentEvent.name" class="event-image">
+        <img
+          :src="`/events/${currentEvent.id}.png`"
+          :alt="currentEvent.name"
+          class="event-image"
+        />
         <div class="event-name">{{ currentEvent.name }}</div>
       </div>
     </Transition>
-    
+
     <!-- 游戏头部 -->
     <header class="game-header">
       <div class="header-content">
-        <h1 class="game-title">{{ $t('game.title') }}</h1>
-        
+        <h1 class="game-title">{{ $t("game.title") }}</h1>
+
         <!-- 选择次数统计（居中） -->
         <div class="choice-counter">
           <UIcon name="i-lucide-hand-coins" class="counter-icon" />
           <span class="counter-text">{{ gameStore.choiceCount }}</span>
         </div>
-        
+
         <div class="header-actions">
-          <button class="icon-btn" :title="$t('buttons.collection')" @click="console.log('收集功能即将推出')">
+          <button
+            class="icon-btn"
+            :title="$t('buttons.collection')"
+            @click="navigateTo(localePath('/collection'))"
+          >
             <UIcon name="i-lucide-trophy" />
           </button>
           <button class="icon-btn" :title="$t('buttons.settings')">
-              <UIcon name="i-lucide-settings" />
-            </button>
-            <button class="icon-btn" title="音量">
-                <UIcon name="i-lucide-volume-2" />
-            </button>
-            <button class="lang-btn-small" :title="$t('language.switch')" @click="switchLanguage">
-              <UIcon name="i-lucide-globe" />
-              <span>{{ currentLanguageName }}</span>
-            </button>
+            <UIcon name="i-lucide-settings" />
+          </button>
+          <button class="icon-btn" title="音量">
+            <UIcon name="i-lucide-volume-2" />
+          </button>
+          <button
+            class="lang-btn-small"
+            :title="$t('language.switch')"
+            @click="switchLanguage"
+          >
+            <UIcon name="i-lucide-globe" />
+            <span>{{ currentLanguageName }}</span>
+          </button>
         </div>
       </div>
     </header>
@@ -494,25 +719,29 @@ onMounted(async () => {
             <div class="loading-dot" />
             <div class="loading-dot" />
           </div>
-          <p>{{ $t('game.loading') }}</p>
+          <p>{{ $t("game.loading") }}</p>
         </div>
 
         <!-- 消息列表 -->
         <TransitionGroup name="message">
-          <div 
-            v-for="message in messages" 
-            :key="message.id" 
-            :class="['message-wrapper', `message-${message.type}`]">
-            
+          <div
+            v-for="message in messages"
+            :key="message.id"
+            :class="['message-wrapper', `message-${message.type}`]"
+          >
             <!-- 场景描述 -->
             <div v-if="message.type === 'scene'" class="scene-message">
               <div v-if="message.image" class="scene-image-placeholder">
                 <UIcon name="i-lucide-image" class="image-icon" />
-                <span>{{ message.image === 'placeholder_forest' ? $t('story.images.forest') : $t('story.images.cabin') }}</span>
+                <span>{{
+                  message.image === "placeholder_forest"
+                    ? $t("story.images.forest")
+                    : $t("story.images.cabin")
+                }}</span>
               </div>
               <p class="scene-text">{{ message.content }}</p>
             </div>
-            
+
             <!-- 事件消息 -->
             <div v-else-if="message.type === 'event'" class="event-message">
               <div class="event-header">
@@ -523,13 +752,16 @@ onMounted(async () => {
             </div>
 
             <!-- 旁白叙述 -->
-            <div v-else-if="message.type === 'narrator'" class="narrator-message">
+            <div
+              v-else-if="message.type === 'narrator'"
+              class="narrator-message"
+            >
               <p>{{ message.content }}</p>
             </div>
 
             <!-- NPC对话 -->
             <div v-else-if="message.type === 'npc'" class="npc-bubble">
-              <div class="avatar">{{ message.avatar || '🌲' }}</div>
+              <div class="avatar">{{ message.avatar || "🌲" }}</div>
               <div class="bubble-content">
                 <div class="speaker-name">{{ message.speaker }}</div>
                 <div class="message-text">{{ message.content }}</div>
@@ -557,19 +789,27 @@ onMounted(async () => {
           <div class="typing-dot" />
           <div class="typing-dot" />
         </div>
-        
+
         <!-- 选项直接在对话框内显示 -->
         <Transition name="fade">
-          <div v-if="showChoices && currentChoices.length > 0" class="choices-in-chat">
+          <div
+            v-if="showChoices && currentChoices.length > 0"
+            class="choices-in-chat"
+          >
             <div class="choices-container">
-              <button 
-                v-for="choice in currentChoices" 
+              <button
+                v-for="choice in currentChoices"
                 :key="choice.id"
                 class="choice-bubble"
                 @click="handleChoice(choice)"
               >
                 <span class="choice-label">{{ choice.label }}</span>
-                <span v-if="choice.description && choice.description !== choice.label" class="choice-desc">
+                <span
+                  v-if="
+                    choice.description && choice.description !== choice.label
+                  "
+                  class="choice-desc"
+                >
                   {{ choice.description }}
                 </span>
               </button>
@@ -578,6 +818,29 @@ onMounted(async () => {
         </Transition>
       </div>
     </main>
+    <!-- 收集弹窗 -->
+    <Transition name="slide-up">
+      <div v-if="collectionToast.show" class="collection-toast">
+        <div class="toast-content">
+          <div class="toast-icon">
+            <UIcon name="i-heroicons-trophy" />
+          </div>
+          <div class="toast-body">
+            <img
+              v-if="collectionToast.imageFile"
+              :src="collectionToast.imageFile"
+              :alt="collectionToast.name"
+              class="toast-image"
+            />
+            <div class="toast-text">
+              <p class="toast-title">新收集！</p>
+              <p class="toast-name">{{ collectionToast.name }}</p>
+              <p class="toast-hint">已加入图鉴</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -607,7 +870,8 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  animation: bgFadeIn 2s ease-out, bgZoomIn 4s ease-out, bgParallax 30s ease-in-out infinite;
+  animation: bgFadeIn 2s ease-out, bgZoomIn 4s ease-out,
+    bgParallax 30s ease-in-out infinite;
 }
 
 /* 背景遮罩层 */
@@ -658,7 +922,8 @@ onMounted(async () => {
 
 /* 背景缓慢移动效果 */
 @keyframes bgParallax {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1) translateX(0);
   }
   50% {
@@ -855,8 +1120,12 @@ onMounted(async () => {
   animation: bounce 1.4s ease-in-out infinite;
 }
 
-.loading-dot:nth-child(1) { animation-delay: -0.32s; }
-.loading-dot:nth-child(2) { animation-delay: -0.16s; }
+.loading-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.loading-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
 /* 消息包装器 */
 .message-wrapper {
@@ -1012,9 +1281,15 @@ onMounted(async () => {
   animation: typing 1.4s ease-in-out infinite;
 }
 
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
-.typing-dot:nth-child(3) { animation-delay: 0s; }
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0s;
+}
 
 /* 对话框内的选项 */
 .choices-in-chat {
@@ -1030,7 +1305,11 @@ onMounted(async () => {
 }
 
 .choice-bubble {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(74, 222, 128, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.08) 0%,
+    rgba(74, 222, 128, 0.08) 100%
+  );
   border: 2px solid rgba(74, 222, 128, 0.3);
   border-radius: 20px;
   padding: 1rem 1.25rem;
@@ -1048,13 +1327,18 @@ onMounted(async () => {
 }
 
 .choice-bubble::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(74, 222, 128, 0.1) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(74, 222, 128, 0.1) 50%,
+    transparent 100%
+  );
   transform: translateX(-100%);
   transition: transform 0.6s ease;
 }
@@ -1064,7 +1348,11 @@ onMounted(async () => {
 }
 
 .choice-bubble:hover {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(74, 222, 128, 0.25) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.25) 0%,
+    rgba(74, 222, 128, 0.25) 100%
+  );
   border-color: rgba(74, 222, 128, 0.7);
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(74, 222, 128, 0.3);
@@ -1097,7 +1385,9 @@ onMounted(async () => {
 }
 
 @keyframes bounce {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0);
   }
   40% {
@@ -1106,7 +1396,9 @@ onMounted(async () => {
 }
 
 @keyframes typing {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0;
   }
@@ -1141,12 +1433,12 @@ onMounted(async () => {
 /* 事件图片容器（左侧） */
 .event-image-container {
   position: fixed;
-  left: 16rem;  /* 往右移动，避开悬浮按钮 */
+  left: 16rem; /* 往右移动，避开悬浮按钮 */
   top: 50%;
   transform: translateY(-50%);
   z-index: 15;
-  max-width: 600px;  /* 放大图片 */
-  width: 50vw;  /* 放大比例 */
+  max-width: 600px; /* 放大图片 */
+  width: 50vw; /* 放大比例 */
 }
 
 .event-image {
@@ -1169,10 +1461,8 @@ onMounted(async () => {
   color: white;
   font-size: 1.4rem;
   font-weight: bold;
-  text-shadow: 
-    0 0 20px rgba(255, 255, 255, 0.8),
-    0 0 40px rgba(255, 255, 255, 0.6),
-    0 0 60px rgba(255, 255, 255, 0.4),
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.8),
+    0 0 40px rgba(255, 255, 255, 0.6), 0 0 60px rgba(255, 255, 255, 0.4),
     2px 2px 4px rgba(0, 0, 0, 0.8);
   letter-spacing: 0.1em;
   position: relative;
@@ -1180,31 +1470,37 @@ onMounted(async () => {
 
 /* 文字下方添加微妙的光晕效果 */
 .event-name::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
   width: 80%;
   height: 2px;
-  background: linear-gradient(90deg, 
+  background: linear-gradient(
+    90deg,
     transparent 0%,
     rgba(255, 255, 255, 0.6) 50%,
-    transparent 100%);
+    transparent 100%
+  );
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 /* 事件消息样式 */
 .event-message {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.1) 0%,
+    rgba(245, 158, 11, 0.1) 100%
+  );
   border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: 12px;
   padding: 1rem 1.5rem;
-  margin: 0.5rem auto;  /* 居中显示 */
-  width: 100%;  /* 固定宽度 */
-  max-width: 600px;  /* 最大宽度限制 */
-  min-width: 400px;  /* 最小宽度限制 */
-  box-sizing: border-box;  /* 确保padding包含在宽度内 */
+  margin: 0.5rem auto; /* 居中显示 */
+  width: 100%; /* 固定宽度 */
+  max-width: 600px; /* 最大宽度限制 */
+  min-width: 400px; /* 最小宽度限制 */
+  box-sizing: border-box; /* 确保padding包含在宽度内 */
 }
 
 .event-header {
@@ -1213,18 +1509,18 @@ onMounted(async () => {
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   color: #f59e0b;
-  justify-content: center;  /* 标题居中 */
+  justify-content: center; /* 标题居中 */
 }
 
 .event-icon {
   font-size: 1.25rem;
-  flex-shrink: 0;  /* 图标不缩小 */
+  flex-shrink: 0; /* 图标不缩小 */
 }
 
 .event-text {
   color: #fefefe;
   line-height: 1.6;
-  text-align: center;  /* 文字居中 */
+  text-align: center; /* 文字居中 */
 }
 
 /* 事件图片过渡动画 */
@@ -1245,7 +1541,8 @@ onMounted(async () => {
 
 /* 添加呼吸动画效果 */
 @keyframes eventGlow {
-  0%, 100% {
+  0%,
+  100% {
     filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
   }
   50% {
@@ -1265,29 +1562,29 @@ onMounted(async () => {
     max-width: 100%;
     margin: 0;
   }
-  
+
   .npc-bubble,
   .player-bubble {
     max-width: 85%;
   }
-  
+
   .choices-in-chat {
     padding: 0.75rem;
   }
-  
+
   .choice-bubble {
     max-width: 100%;
     margin-right: 0;
     padding: 0.9rem 1.1rem;
   }
-  
+
   .event-message {
-    width: 90%;  /* 移动端更宽 */
-    min-width: auto;  /* 移动端不设置最小宽度 */
-    max-width: 100%;  /* 移动端最大宽度100% */
+    width: 90%; /* 移动端更宽 */
+    min-width: auto; /* 移动端不设置最小宽度 */
+    max-width: 100%; /* 移动端最大宽度100% */
     margin: 0.5rem auto;
   }
-  
+
   .choice-counter {
     position: static;
     transform: none;
@@ -1295,19 +1592,19 @@ onMounted(async () => {
     padding: 0.4rem 0.8rem;
     font-size: 0.875rem;
   }
-  
+
   .header-content {
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.5rem;
   }
-  
+
   .game-title {
     width: 100%;
     text-align: center;
     font-size: 1.25rem;
   }
-  
+
   .event-image-container {
     position: static;
     width: 100%;
@@ -1318,24 +1615,145 @@ onMounted(async () => {
     margin-bottom: 1rem;
     padding: 0 1rem;
   }
-  
+
   .event-image {
     width: 100%;
     max-width: 350px;
     margin: 0 auto;
     display: block;
   }
-  
+
   .event-image:hover {
     transform: none;
   }
-  
+
   .event-name {
     font-size: 1.2rem;
   }
-  
+
   .event-name::after {
     display: none;
+  }
+}
+
+/* 收集弹窗 */
+.collection-toast {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast-content {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 30, 40, 0.98) 0%,
+    rgba(50, 50, 70, 0.95) 100%
+  );
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 20px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.3),
+    inset 0 0 20px rgba(255, 215, 0, 0.1);
+  animation: collectionGlow 2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 320px;
+}
+
+.toast-icon {
+  font-size: 2.5rem;
+  animation: bounce 1s ease-in-out infinite;
+  color: #ffd700;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6));
+}
+
+.toast-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toast-image {
+  width: 60px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.toast-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toast-title {
+  color: #ffd700;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.toast-name {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.toast-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+/* 弹窗动画 */
+.slide-up-enter-active {
+  animation: slideUp 0.5s ease-out;
+}
+
+.slide-up-leave-active {
+  animation: slideDown 0.5s ease-in;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(100px);
+  }
+}
+
+@keyframes collectionGlow {
+  0%,
+  100% {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.3),
+      inset 0 0 20px rgba(255, 215, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(255, 215, 0, 0.5),
+      inset 0 0 30px rgba(255, 215, 0, 0.2);
   }
 }
 </style>

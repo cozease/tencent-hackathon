@@ -11,7 +11,8 @@
     "collection": "收集",
     "settings": "设置",
     "about": "关于",
-    "resetGame": "重置游戏"
+    "resetGame": "重置游戏",
+    "back": "返回"
   },
   "reset": {
     "title": "确认重置",
@@ -64,5 +65,8 @@
       "forest": "森林场景",
       "cabin": "木屋场景"
     }
+  },
+  "collection": {
+    "title": "收集图鉴"
   }
 }

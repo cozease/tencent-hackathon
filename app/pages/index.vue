@@ -1,44 +1,46 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useGameStore } from '~/stores/game'
+import { ref, computed } from "vue";
+import { useGameStore } from "~/stores/game";
 
 // 使用 i18n
-const { locale } = useI18n()
-const localePath = useLocalePath()
+const { locale } = useI18n();
+const localePath = useLocalePath();
 
 // 使用游戏商店
-const gameStore = useGameStore()
+const gameStore = useGameStore();
 
 // 响应式数据
-const isHovered = ref(false)
-const isPressed = ref(false)
-const showResetModal = ref(false)
+const isHovered = ref(false);
+const isPressed = ref(false);
+const showResetModal = ref(false);
 
 // 处理开始游戏点击事件
 const handleStartGame = () => {
-  console.log('游戏即将开始...')
+  console.log("游戏即将开始...");
   // 跳转到游戏页面
-  navigateTo(localePath('/game'))
-}
+  navigateTo(localePath("/game"));
+};
 
 // 切换语言 - 使用路由跳转
 const switchLanguage = async () => {
-  const targetLocale = locale.value === 'zh' ? 'en' : 'zh'
-  await navigateTo(localePath('/', targetLocale))
-}
+  const targetLocale = locale.value === "zh" ? "en" : "zh";
+  await navigateTo(localePath("/", targetLocale));
+};
 
 // 获取当前语言显示名称
 const currentLanguageName = computed(() => {
-  return locale.value === 'zh' ? '中文' : 'EN'
-})
+  return locale.value === "zh" ? "中文" : "EN";
+});
 
 // 重置游戏
 const handleReset = () => {
-  gameStore.resetGameState()
-  showResetModal.value = false
+  gameStore.resetGameState();
+  showResetModal.value = false;
   // 显示成功提示（可选）
-  console.log(locale.value === 'zh' ? '游戏进度已重置' : 'Game progress has been reset')
-}
+  console.log(
+    locale.value === "zh" ? "游戏进度已重置" : "Game progress has been reset"
+  );
+};
 </script>
 
 <template>
@@ -47,10 +49,10 @@ const handleReset = () => {
     <div class="background-layer absolute inset-0 z-0">
       <!-- 渐变背景 -->
       <div class="bg-gradient absolute inset-0" />
-      
+
       <!-- 装饰元素 -->
       <div class="decoration-dots" />
-      
+
       <!-- 未来可以在这里添加背景图片 -->
       <!-- <img src="/images/game-background.jpg" alt="背景" class="absolute inset-0 w-full h-full object-cover" /> -->
     </div>
@@ -63,19 +65,16 @@ const handleReset = () => {
           <!-- 游戏Logo/标题 -->
           <div class="game-title-wrapper">
             <h1 class="game-title text-4xl font-bold">
-              <span class="title-text">{{ $t('game.title') }}</span>
+              <span class="title-text">{{ $t("game.title") }}</span>
             </h1>
             <div class="title-subtitle text-sm opacity-80 mt-1">
-              {{ $t('game.subtitle') }}
+              {{ $t("game.subtitle") }}
             </div>
           </div>
-          
+
           <!-- 语言切换按钮 -->
           <div class="language-switcher">
-            <button
-              class="lang-btn"
-              @click="switchLanguage"
-            >
+            <button class="lang-btn" @click="switchLanguage">
               <UIcon name="i-lucide-globe" class="mr-2" />
               <span class="font-medium">{{ currentLanguageName }}</span>
             </button>
@@ -94,7 +93,7 @@ const handleReset = () => {
               <!-- <img src="/images/game-logo.png" alt="游戏Logo" class="w-64 h-64 mx-auto" /> -->
             </div>
             <p class="mt-4 text-lg opacity-90">
-              {{ $t('game.slogan') }}
+              {{ $t("game.slogan") }}
             </p>
           </div>
 
@@ -103,9 +102,9 @@ const handleReset = () => {
             <!-- 开始游戏按钮 -->
             <button
               class="start-game-btn"
-              :class="{ 
-                'btn-hover': isHovered, 
-                'btn-pressed': isPressed 
+              :class="{
+                'btn-hover': isHovered,
+                'btn-pressed': isPressed,
               }"
               @click="handleStartGame"
               @mouseenter="isHovered = true"
@@ -116,23 +115,28 @@ const handleReset = () => {
               <span class="btn-shine" />
               <span class="btn-content">
                 <UIcon name="i-lucide-play" class="mr-2 text-2xl" />
-                <span class="text-xl font-bold">{{ $t('buttons.startGame') }}</span>
+                <span class="text-xl font-bold">{{
+                  $t("buttons.startGame")
+                }}</span>
               </span>
             </button>
 
             <!-- 其他功能按钮（预留） -->
             <div class="secondary-buttons flex gap-4 justify-center mt-6">
-              <button class="secondary-btn" @click="console.log('收集功能即将推出')">
+              <button
+                class="secondary-btn"
+                @click="navigateTo(localePath('/collection'))"
+              >
                 <UIcon name="i-lucide-trophy" class="mr-1" />
-                {{ $t('buttons.collection') }}
+                {{ $t("buttons.collection") }}
               </button>
               <button class="secondary-btn">
                 <UIcon name="i-lucide-settings" class="mr-1" />
-                {{ $t('buttons.settings') }}
+                {{ $t("buttons.settings") }}
               </button>
               <button class="secondary-btn">
                 <UIcon name="i-lucide-info" class="mr-1" />
-                {{ $t('buttons.about') }}
+                {{ $t("buttons.about") }}
               </button>
             </div>
           </div>
@@ -141,7 +145,7 @@ const handleReset = () => {
 
       <!-- 底部装饰区域 -->
       <footer class="game-footer py-4 text-center opacity-60">
-        <p class="text-sm">{{ $t('game.footer') }}</p>
+        <p class="text-sm">{{ $t("game.footer") }}</p>
       </footer>
     </div>
 
@@ -151,31 +155,35 @@ const handleReset = () => {
       <div class="floating-leaf leaf-2" />
       <div class="floating-leaf leaf-3" />
     </div>
-    
+
     <!-- 重置游戏按钮 -->
     <button class="reset-button" @click="showResetModal = true">
       <UIcon name="i-lucide-refresh-cw" />
-      <span>{{ $t('buttons.resetGame') }}</span>
+      <span>{{ $t("buttons.resetGame") }}</span>
     </button>
-    
+
     <!-- 确认重置弹窗 -->
     <Transition name="modal">
-      <div v-if="showResetModal" class="reset-modal-overlay" @click="showResetModal = false">
+      <div
+        v-if="showResetModal"
+        class="reset-modal-overlay"
+        @click="showResetModal = false"
+      >
         <div class="reset-modal" @click.stop>
           <div class="modal-header">
-            <h3 class="modal-title">{{ $t('reset.title') }}</h3>
+            <h3 class="modal-title">{{ $t("reset.title") }}</h3>
           </div>
-          
+
           <div class="modal-body">
-            <p class="modal-message">{{ $t('reset.message') }}</p>
+            <p class="modal-message">{{ $t("reset.message") }}</p>
           </div>
-          
+
           <div class="modal-footer">
             <button class="btn-cancel" @click="showResetModal = false">
-              {{ $t('reset.cancel') }}
+              {{ $t("reset.cancel") }}
             </button>
             <button class="btn-confirm" @click="handleReset">
-              {{ $t('reset.confirm') }}
+              {{ $t("reset.confirm") }}
             </button>
           </div>
         </div>
@@ -188,12 +196,13 @@ const handleReset = () => {
 /* 游戏容器样式 */
 .game-container {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* 背景渐变 */
 .bg-gradient {
-  background: linear-gradient(180deg, 
+  background: linear-gradient(
+    180deg,
     rgba(16, 185, 129, 0.1) 0%,
     rgba(34, 197, 94, 0.2) 50%,
     rgba(74, 222, 128, 0.1) 100%
@@ -205,7 +214,11 @@ const handleReset = () => {
   position: absolute;
   width: 100%;
   height: 100%;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 1px,
+    transparent 1px
+  );
   background-size: 30px 30px;
   animation: float 20s infinite linear;
 }
@@ -216,7 +229,7 @@ const handleReset = () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
   animation: glow 2s ease-in-out infinite alternate;
 }
 
@@ -276,8 +289,13 @@ const handleReset = () => {
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 /* 开始游戏按钮 */
@@ -293,9 +311,8 @@ const handleReset = () => {
   cursor: pointer;
   overflow: hidden;
   transition: all 0.3s ease;
-  box-shadow: 
-    0 10px 30px rgba(16, 185, 129, 0.4),
-    inset 0 1px 0 rgba(255,255,255,0.3);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -303,16 +320,14 @@ const handleReset = () => {
 
 .start-game-btn:hover {
   transform: translateY(-3px) scale(1.05);
-  box-shadow: 
-    0 15px 40px rgba(16, 185, 129, 0.5),
-    inset 0 1px 0 rgba(255,255,255,0.4);
+  box-shadow: 0 15px 40px rgba(16, 185, 129, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .start-game-btn.btn-pressed {
   transform: translateY(1px) scale(0.98);
-  box-shadow: 
-    0 5px 15px rgba(16, 185, 129, 0.3),
-    inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* 按钮光泽效果 */
@@ -322,9 +337,10 @@ const handleReset = () => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255,255,255,0.3), 
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
     transparent
   );
   transition: left 0.5s ease;
@@ -359,7 +375,7 @@ const handleReset = () => {
 .secondary-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* 漂浮动画元素 */
@@ -562,33 +578,33 @@ const handleReset = () => {
   .game-title {
     font-size: 2rem;
   }
-  
+
   .logo-box {
     width: 150px;
     height: 150px;
   }
-  
+
   .start-game-btn {
     padding: 16px 48px;
     font-size: 1.125rem;
   }
-  
+
   .secondary-buttons {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .secondary-btn {
     width: 200px;
   }
-  
+
   .reset-button {
     bottom: 1rem;
     right: 1rem;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
   }
-  
+
   .reset-modal {
     margin: 1rem;
   }

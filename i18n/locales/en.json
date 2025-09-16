@@ -11,7 +11,8 @@
     "collection": "Collection",
     "settings": "Settings",
     "about": "About",
-    "resetGame": "Reset Game"
+    "resetGame": "Reset Game",
+    "back": "Back"
   },
   "reset": {
     "title": "Confirm Reset",
@@ -64,5 +65,8 @@
       "forest": "Forest Scene",
       "cabin": "Cabin Scene"
     }
+  },
+  "collection": {
+    "title": "Collection Guidebook"
   }
 }
