@@ -1,0 +1,68 @@
+{
+  "game": {
+    "title": "Oroqen's Path",
+    "subtitle": "Explore Nature, Protect Earth",
+    "slogan": "Start Your Eco-Adventure Journey",
+    "footer": "© 2025 Oroqen's Path - Making Environmental Protection Fun",
+    "loading": "Loading game scene..."
+  },
+  "buttons": {
+    "startGame": "Start Game",
+    "collection": "Collection",
+    "settings": "Settings",
+    "about": "About",
+    "resetGame": "Reset Game"
+  },
+  "reset": {
+    "title": "Confirm Reset",
+    "message": "Are you sure you want to clear your game progress? This will reset your coins and inventory.",
+    "confirm": "Confirm Reset",
+    "cancel": "Cancel",
+    "success": "Game progress has been reset"
+  },
+  "language": {
+    "switch": "Switch Language",
+    "current": "English"
+  },
+  "story": {
+    "intro": {
+      "scene": "Accompanied by long and tranquil background music, the camera passes through layers of golden Dahurian larch forests. Sunlight filters through the leaves, casting dappled spots of light. The camera slowly zooms in, finally focusing on a small wooden cabin in a forest clearing, with smoke curling up from the chimney.",
+      "welcome": "Welcome to the Greater Khingan Mountains.",
+      "sceneLabel": "[Scene: Outside the Protection Station Base Camp]",
+      "arrival1": "The sound of the long-distance bus engine approaches and finally stops in front of you. The door opens, and you take a deep breath. The crisp air mixed with pine needles and moist earth rushes into your lungs, instantly dispelling your travel fatigue.",
+      "arrival2": "Carrying your heavy luggage, you look around curiously at this place where you'll work and live - your new home, the forest protection station.",
+      "arrival3": "At this moment, the cabin door creaks open. A middle-aged man with tanned skin and sharp eyes walks out. He's wearing a faded camouflage work uniform, holding a steaming enamel mug."
+    },
+    "npc": {
+      "zhangIntro": "You must be the new intern researcher? I'm the person in charge here, just call me Old Zhang.",
+      "zhangPoint": "Old Zhang points to the endless forest behind you, his tone steady and powerful:",
+      "zhangPhilosophy": "This forest is both a generous mother and a strict teacher. Everything you see, hear, and every choice you make here will not only be recorded in your research report but also engraved in the growth rings of the forest.",
+      "zhangEquipment": "He leads you into the warm cabin. On the table, a set of basic equipment has been prepared for you: a slightly old but well-maintained camera, a detailed area map, and a thick 'Field Guide to Common Flora and Fauna of the Greater Khingan Mountains'.",
+      "zhangRest": "Put down your luggage first and get familiar with the environment. Your first official survey starts tomorrow. This afternoon is yours to arrange.",
+      "zhangAdvice": "Remember, an excellent researcher needs not only knowledge but also wisdom and patience. So, what's your first step?"
+    },
+    "choices": {
+      "prompt": "You need to make a choice:",
+      "checkEquipment": {
+        "label": "[Check Equipment Carefully]",
+        "description": "A craftsman must sharpen his tools. Let me familiarize myself with how to use this equipment."
+      },
+      "askZhang": {
+        "label": "[Ask Old Zhang]",
+        "description": "Station Chief, can you tell me about the situation around here? Like... any special discoveries recently?"
+      },
+      "explore": {
+        "label": "[Walk Around the Camp]",
+        "description": "I want to walk around first and feel the atmosphere of the forest."
+      }
+    },
+    "characters": {
+      "zhang": "Old Zhang",
+      "player": "Me"
+    },
+    "images": {
+      "forest": "Forest Scene",
+      "cabin": "Cabin Scene"
+    }
+  }
+}
