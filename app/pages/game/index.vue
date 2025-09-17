@@ -91,6 +91,14 @@ const collectionToast = ref({
   imageFile: "",
 });
 
+// 行程回顾弹窗状态
+const reviewModal = ref({
+  show: false,
+  content: "",
+  isLoading: false,
+  error: "",
+});
+
 // 自动滚动到底部
 const scrollToBottom = () => {
   nextTick(() => {
@@ -148,8 +156,7 @@ const handleChoice = async (choice: Choice) => {
   }
 
   // 普通选择的处理
-  // 增加选择次数
-  gameStore.incrementChoiceCount();
+  // 老张对话不消耗体力
 
   // 添加玩家消息
   await addMessage(
@@ -170,6 +177,10 @@ const handleChoice = async (choice: Choice) => {
 // 开始游戏序列
 const startGameSequence = async () => {
   gameStarted.value = true;
+
+  // 开始新游戏时恢复体力并清空历程
+  gameStore.restoreStamina();
+  gameStore.clearJourney();
 
   // 如果是第一次玩，给一些初始金币
   if (gameStore.coins === 0) {
@@ -228,7 +239,7 @@ const startGameSequence = async () => {
     0
   ); //2000)
 
-  // NPC对话
+  // 老张出场
   await addMessage(
     {
       type: "npc",
@@ -242,11 +253,31 @@ const startGameSequence = async () => {
   await addMessage(
     {
       type: "narrator",
+      content: t("story.npc.zhangIntro2"),
+    },
+    0
+  );
+
+  // 玩家问话
+  await addMessage(
+    {
+      type: "player",
+      speaker: t("story.characters.player"),
       content: t("story.npc.zhangPoint"),
     },
     0
   ); //1500)
 
+  // 老张的反应描述
+  await addMessage(
+    {
+      type: "narrator",
+      content: t("story.npc.zhangReaction"),
+    },
+    0
+  );
+
+  // 老张回答
   await addMessage(
     {
       type: "npc",
@@ -257,6 +288,7 @@ const startGameSequence = async () => {
     0
   ); //2500)
 
+  // 叙述
   await addMessage(
     {
       type: "narrator",
@@ -267,20 +299,16 @@ const startGameSequence = async () => {
 
   await addMessage(
     {
-      type: "npc",
-      speaker: t("story.characters.zhang"),
+      type: "narrator",
       content: t("story.npc.zhangRest"),
-      avatar: "👨‍🌾",
     },
     0
   ); //2000)
 
   await addMessage(
     {
-      type: "npc",
-      speaker: t("story.characters.zhang"),
+      type: "narrator",
       content: t("story.npc.zhangAdvice"),
-      avatar: "👨‍🌾",
     },
     0
   ); //2000)
@@ -380,6 +408,57 @@ interface EventsResponse {
 }
 
 // 加载收集数据
+// 分享回顾
+const shareReview = () => {
+  // 复制到剪贴板
+  if (navigator.clipboard && reviewModal.value.content) {
+    navigator.clipboard
+      .writeText(reviewModal.value.content)
+      .then(() => {
+        // 显示成功提示
+        alert(
+          t("game.reviewCopied") || "回顾已复制到剪贴板，可以分享给朋友了！"
+        );
+      })
+      .catch(() => {
+        alert(t("game.reviewCopyFailed") || "复制失败，请手动复制内容");
+      });
+  }
+};
+
+// 生成行程回顾
+const generateReview = async () => {
+  reviewModal.value.isLoading = true;
+  reviewModal.value.error = "";
+  reviewModal.value.show = true;
+
+  try {
+    const journeyData = gameStore.getJourneyData();
+
+    interface ReviewResponse {
+      success: boolean;
+      review?: string;
+    }
+
+    const response = await $fetch<ReviewResponse>("/api/generate-review", {
+      method: "POST",
+      body: journeyData,
+    });
+
+    if (response.success && response.review) {
+      reviewModal.value.content = response.review;
+    } else {
+      throw new Error("Failed to generate review");
+    }
+  } catch (error) {
+    console.error("Error generating review:", error);
+    reviewModal.value.error =
+      t("game.reviewError") || "生成回顾时出现错误，请稍后重试。";
+  } finally {
+    reviewModal.value.isLoading = false;
+  }
+};
+
 const loadCollections = async () => {
   if (collectionsLoaded.value) return;
   try {
@@ -481,19 +560,8 @@ const showEvent = async (eventId: number) => {
 
   // 特殊处理事件1（结束事件）
   if (event.id === 1) {
-    // 显示回到首页按钮
-    const choices: Choice[] = [
-      {
-        id: "home",
-        label: "回到首页",
-        description: "结束探险，返回主菜单",
-        action: async () => {
-          await navigateTo(localePath("/"));
-        },
-      },
-    ];
-    currentChoices.value = choices;
-    showChoices.value = true;
+    // 生成并显示行程回顾
+    await generateReview();
   } else if (event.choice1 && event.choice1 !== "0") {
     // 显示选项
     const choices: Choice[] = [];
@@ -532,8 +600,8 @@ const handleEventChoice = async (choiceNum: number) => {
   showChoices.value = false;
   currentChoices.value = [];
 
-  // 增加选择次数
-  gameStore.incrementChoiceCount();
+  // 消耗体力（每次事件选择消耗1点体力）
+  gameStore.consumeStamina();
 
   // 添加玩家选择消息
   const choice =
@@ -546,6 +614,9 @@ const handleEventChoice = async (choiceNum: number) => {
     },
     500
   );
+
+  // 记录历程（事件内容和玩家选择）
+  gameStore.addJourneyEvent(currentEvent.value.content, choice);
 
   // 获取选择结果
   const possibility =
@@ -564,13 +635,14 @@ const handleEventChoice = async (choiceNum: number) => {
   const randomNum = Math.random() * 100;
 
   if (reward && reward !== 0 && randomNum < possibilityNum) {
-    // 获得卡片
-    const isNewCollection = gameStore.addCard(reward);
+    // 查找卡片信息
+    const collectionItem = collections.value.find((c) => c.id === reward);
 
-    if (isNewCollection) {
-      // 查找卡片信息
-      const collectionItem = collections.value.find((c) => c.id === reward);
-      if (collectionItem) {
+    if (collectionItem) {
+      // 获得卡片（传入名称用于历程记录）
+      const isNewCollection = gameStore.addCard(reward, collectionItem.name);
+
+      if (isNewCollection) {
         // 显示收集弹窗
         collectionToast.value = {
           show: true,
@@ -598,17 +670,24 @@ const handleEventChoice = async (choiceNum: number) => {
   }
 
   // 显示继续探险的选择
-  const adventureChoices: Choice[] = [
-    {
-      id: "end",
-      label: "结束探险",
-      description: "结束今天的探险",
-      action: async () => {
-        showChoices.value = false;
-        await showEvent(1); // 跳转到事件1
-      },
+  const adventureChoices: Choice[] = [];
+
+  // 总是显示结束探险选项
+  adventureChoices.push({
+    id: "end",
+    label: "结束探险",
+    description: "结束今天的探险",
+    action: async () => {
+      showChoices.value = false;
+      // 恢复体力
+      gameStore.restoreStamina();
+      await showEvent(1); // 跳转到事件1
     },
-    {
+  });
+
+  // 只有还有体力时才显示继续探险选项
+  if (gameStore.hasStamina()) {
+    adventureChoices.push({
       id: "continue",
       label: "继续探险",
       description: "继续前进",
@@ -621,8 +700,17 @@ const handleEventChoice = async (choiceNum: number) => {
           await showEvent(1);
         }
       },
-    },
-  ];
+    });
+  } else {
+    // 体力耗尽时的特殊提示
+    await addMessage(
+      {
+        type: "narrator",
+        content: t("game.staminaExhausted"),
+      },
+      1000
+    );
+  }
 
   // 延迟显示选择
   setTimeout(() => {
@@ -677,10 +765,17 @@ onMounted(async () => {
       <div class="header-content">
         <h1 class="game-title">{{ $t("game.title") }}</h1>
 
-        <!-- 选择次数统计（居中） -->
-        <div class="choice-counter">
-          <UIcon name="i-lucide-hand-coins" class="counter-icon" />
-          <span class="counter-text">{{ gameStore.choiceCount }}</span>
+        <!-- 体力值显示（居中） -->
+        <div class="stamina-display">
+          <span class="stamina-label">{{ $t("game.stamina") }}</span>
+          <div class="stamina-icons">
+            <UIcon
+              v-for="i in 5"
+              :key="i"
+              name="i-heroicons-heart-solid"
+              :class="['stamina-icon', { depleted: i > gameStore.stamina }]"
+            />
+          </div>
         </div>
 
         <div class="header-actions">
@@ -841,6 +936,96 @@ onMounted(async () => {
         </div>
       </div>
     </Transition>
+
+    <!-- 行程回顾弹窗 -->
+    <Transition name="modal-fade">
+      <div v-if="reviewModal.show" class="review-modal-overlay">
+        <div class="review-modal">
+          <!-- 装饰性元素 -->
+          <div class="review-decoration review-decoration-top" />
+          <div class="review-decoration review-decoration-bottom" />
+
+          <div class="review-header">
+            <div class="review-header-icon">
+              <UIcon name="i-heroicons-book-open" />
+            </div>
+            <h2 class="review-title">
+              {{ $t("game.reviewTitle") || "探险回顾" }}
+            </h2>
+            <div class="review-subtitle">
+              {{ $t("game.reviewSubtitle") || "你的森林故事" }}
+            </div>
+          </div>
+
+          <div class="review-body">
+            <!-- 加载中 -->
+            <div v-if="reviewModal.isLoading" class="review-loading">
+              <div class="loading-animation">
+                <div class="forest-loader">
+                  <div class="tree tree-1" />
+                  <div class="tree tree-2" />
+                  <div class="tree tree-3" />
+                </div>
+              </div>
+              <p class="loading-text">
+                {{
+                  $t("game.reviewGenerating") || "正在生成您的专属探险回顾..."
+                }}
+              </p>
+              <div class="loading-progress">
+                <div class="progress-bar" />
+              </div>
+            </div>
+
+            <!-- 错误提示 -->
+            <div v-else-if="reviewModal.error" class="review-error">
+              <div class="error-icon-wrapper">
+                <UIcon
+                  name="i-heroicons-exclamation-triangle"
+                  class="error-icon"
+                />
+              </div>
+              <p class="error-message">{{ reviewModal.error }}</p>
+              <button class="retry-button" @click="generateReview()">
+                <UIcon name="i-heroicons-arrow-path" />
+                重试
+              </button>
+            </div>
+
+            <!-- 回顾内容 -->
+            <div v-else class="review-content">
+              <div class="content-wrapper">
+                <p class="review-text">{{ reviewModal.content }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-footer">
+            <div class="footer-decoration" />
+            <button
+              class="review-button primary"
+              :disabled="reviewModal.isLoading"
+              @click="navigateTo(localePath('/'))"
+            >
+              <UIcon name="i-heroicons-home" />
+              {{ $t("buttons.back") || "回到首页" }}
+            </button>
+            <button
+              v-if="
+                !reviewModal.isLoading &&
+                !reviewModal.error &&
+                reviewModal.content
+              "
+              class="review-button secondary"
+              @click="shareReview()"
+            >
+              <UIcon name="i-heroicons-share" />
+              {{ $t("buttons.share") || "分享" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -963,14 +1148,14 @@ onMounted(async () => {
   position: relative;
 }
 
-/* 选择次数计数器 */
-.choice-counter {
+/* 体力值显示 */
+.stamina-display {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -978,17 +1163,57 @@ onMounted(async () => {
   padding: 0.4rem 0.8rem;
 }
 
-.counter-icon {
-  color: #fbbf24;
-  font-size: 1.1rem;
+.stamina-label {
+  color: #fecaca;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-right: 0.25rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.counter-text {
-  color: white;
-  font-weight: bold;
-  font-size: 1.1rem;
-  min-width: 1.5rem;
-  text-align: center;
+.stamina-icons {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+}
+
+.stamina-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  color: #ef4444;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.stamina-icon.depleted {
+  color: #6b7280;
+  filter: none;
+  opacity: 0.3;
+  animation: none;
+}
+
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  }
+  14% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+  }
+  28% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  }
+  42% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+  }
+  70% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  }
 }
 
 .game-title {
@@ -1585,12 +1810,21 @@ onMounted(async () => {
     margin: 0.5rem auto;
   }
 
-  .choice-counter {
+  .stamina-display {
     position: static;
     transform: none;
     margin: 0 auto;
     padding: 0.4rem 0.8rem;
     font-size: 0.875rem;
+  }
+
+  .stamina-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .stamina-label {
+    font-size: 0.85rem;
   }
 
   .header-content {
@@ -1754,6 +1988,564 @@ onMounted(async () => {
   50% {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 80px rgba(255, 215, 0, 0.5),
       inset 0 0 30px rgba(255, 215, 0, 0.2);
+  }
+}
+
+/* 行程回顾弹窗样式 */
+.review-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 197, 94, 0.1),
+    rgba(0, 0, 0, 0.8)
+  );
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(8px);
+  animation: overlayFadeIn 0.4s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+.review-modal {
+  position: relative;
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 50%, #dcfce7 100%);
+  border-radius: 24px;
+  max-width: 700px;
+  width: 92%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.1),
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05),
+    0 0 80px rgba(34, 197, 94, 0.2);
+  animation: modalBounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  overflow: hidden;
+}
+
+@keyframes modalBounceIn {
+  0% {
+    transform: scale(0.8) translateY(50px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 装饰性元素 */
+.review-decoration {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.1;
+}
+
+.review-decoration-top {
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, #22c55e 0%, transparent 70%);
+  animation: floatDecoration 8s ease-in-out infinite;
+}
+
+.review-decoration-bottom {
+  bottom: 0;
+  right: 0;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #4ade80 0%, transparent 70%);
+  animation: floatDecoration 8s ease-in-out infinite reverse;
+}
+
+@keyframes floatDecoration {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-20px, -20px) scale(1.1);
+  }
+}
+
+.review-header {
+  padding: 2.5rem 2rem 1.5rem;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+}
+
+.review-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+  animation: iconPulse 2s ease-in-out infinite;
+  color: white;
+  font-size: 1.5rem;
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+  }
+}
+
+.review-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.5px;
+}
+
+.review-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.review-body {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  min-height: 200px;
+  position: relative;
+}
+
+/* 自定义滚动条 */
+.review-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.review-body::-webkit-scrollbar-track {
+  background: rgba(34, 197, 94, 0.05);
+  border-radius: 4px;
+}
+
+.review-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  border-radius: 4px;
+}
+
+.review-body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+/* 加载状态 */
+.review-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 3rem;
+  min-height: 300px;
+}
+
+.loading-animation {
+  position: relative;
+  width: 120px;
+  height: 80px;
+}
+
+.forest-loader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 15px;
+  height: 100%;
+}
+
+.tree {
+  width: 20px;
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  border-radius: 10px 10px 0 0;
+  animation: treeGrow 1.5s ease-in-out infinite;
+}
+
+.tree-1 {
+  height: 40px;
+  animation-delay: 0s;
+}
+
+.tree-2 {
+  height: 60px;
+  animation-delay: 0.2s;
+}
+
+.tree-3 {
+  height: 45px;
+  animation-delay: 0.4s;
+}
+
+@keyframes treeGrow {
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1.3);
+    opacity: 1;
+  }
+}
+
+.loading-text {
+  color: #6b7280;
+  font-size: 1rem;
+  text-align: center;
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.loading-progress {
+  width: 200px;
+  height: 4px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+  width: 30%;
+  border-radius: 2px;
+  animation: progressMove 2s ease-in-out infinite;
+}
+
+@keyframes progressMove {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* 错误状态 */
+.review-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 3rem;
+  min-height: 300px;
+}
+
+.error-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fecaca 0%, #ef4444 100%);
+  border-radius: 50%;
+  animation: errorShake 0.5s ease-in-out;
+}
+
+@keyframes errorShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.error-icon {
+  font-size: 2.5rem;
+  color: white;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 1rem;
+  text-align: center;
+  max-width: 80%;
+}
+
+.retry-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  color: #991b1b;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* 回顾内容 */
+.review-content {
+  animation: contentFadeIn 0.8s ease-out;
+}
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-wrapper {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+}
+
+.review-text {
+  font-size: 1.05rem;
+  color: #374151;
+  white-space: pre-wrap;
+  line-height: 1.9;
+  margin: 0;
+  text-align: justify;
+  letter-spacing: 0.3px;
+}
+
+/* 页脚 */
+.review-footer {
+  position: relative;
+  padding: 1.5rem 2rem 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+}
+
+.footer-decoration {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #22c55e 50%,
+    transparent 100%
+  );
+  opacity: 0.3;
+}
+
+.review-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.8rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.review-button.primary {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
+}
+
+.review-button.primary:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.review-button.secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: #22c55e;
+  border: 2px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.review-button.secondary:hover {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  transform: translateY(-1px);
+}
+
+.review-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* 弹窗动画 */
+.modal-fade-enter-active {
+  transition: all 0.4s ease-out;
+}
+
+.modal-fade-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.modal-fade-enter-from {
+  opacity: 0;
+}
+
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .review-modal {
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 16px;
+  }
+
+  .review-header {
+    padding: 2rem 1.5rem 1rem;
+  }
+
+  .review-title {
+    font-size: 1.5rem;
+  }
+
+  .review-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .review-body {
+    padding: 1rem 1.5rem;
+  }
+
+  .review-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .review-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.5rem;
+  }
+
+  .review-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .review-decoration-top {
+    width: 150px;
+    height: 150px;
+  }
+
+  .review-decoration-bottom {
+    width: 180px;
+    height: 180px;
+  }
+
+  .forest-loader {
+    gap: 10px;
+  }
+
+  .tree {
+    width: 16px;
+  }
+
+  .tree-1 {
+    height: 30px;
+  }
+
+  .tree-2 {
+    height: 45px;
+  }
+
+  .tree-3 {
+    height: 35px;
+  }
+
+  .loading-text {
+    font-size: 0.9rem;
+  }
+
+  .error-message {
+    font-size: 0.9rem;
   }
 }
 </style>

@@ -4,7 +4,15 @@
     "subtitle": "Explore Nature, Protect Earth",
     "slogan": "Start Your Eco-Adventure Journey",
     "footer": "© 2025 Oroqen's Path - Making Environmental Protection Fun",
-    "loading": "Loading game scene..."
+    "loading": "Loading game scene...",
+    "stamina": "Stamina",
+    "staminaExhausted": "Your stamina is exhausted. You need to rest.",
+    "reviewTitle": "Adventure Review",
+    "reviewSubtitle": "Your Forest Story",
+    "reviewGenerating": "Generating your personalized adventure review...",
+    "reviewError": "An error occurred while generating the review. Please try again later.",
+    "reviewCopied": "Review has been copied to clipboard. You can share it with friends now!",
+    "reviewCopyFailed": "Failed to copy. Please copy the content manually."
   },
   "buttons": {
     "startGame": "Start Game",
@@ -12,7 +20,8 @@
     "settings": "Settings",
     "about": "About",
     "resetGame": "Reset Game",
-    "back": "Back"
+    "back": "Back",
+    "share": "Share"
   },
   "reset": {
     "title": "Confirm Reset",
@@ -30,17 +39,19 @@
       "scene": "Accompanied by long and tranquil background music, the camera passes through layers of golden Dahurian larch forests. Sunlight filters through the leaves, casting dappled spots of light. The camera slowly zooms in, finally focusing on a small wooden cabin in a forest clearing, with smoke curling up from the chimney.",
       "welcome": "Welcome to the Greater Khingan Mountains.",
       "sceneLabel": "[Scene: Outside the Protection Station Base Camp]",
-      "arrival1": "The sound of the long-distance bus engine approaches and finally stops in front of you. The door opens, and you take a deep breath. The crisp air mixed with pine needles and moist earth rushes into your lungs, instantly dispelling your travel fatigue.",
-      "arrival2": "Carrying your heavy luggage, you look around curiously at this place where you'll work and live - your new home, the forest protection station.",
-      "arrival3": "At this moment, the cabin door creaks open. A middle-aged man with tanned skin and sharp eyes walks out. He's wearing a faded camouflage work uniform, holding a steaming enamel mug."
+      "arrival1": "The long-distance bus stops in front of you. The door opens, and a crisp air mixed with pine needles and earth rushes toward you.",
+      "arrival2": "Just as you shoulder your pack, at the edge of the tree line in the distance, a massive snow-white beast flashes by. Sunlight reflects off it in a blinding halo. You don't even catch its full form, only a shocking silhouette.",
+      "arrival3": "With a creak, the cabin door opens. A middle-aged man with tanned skin walks out, his eyes sharp."
     },
     "npc": {
-      "zhangIntro": "You must be the new intern researcher? I'm the person in charge here, just call me Old Zhang.",
-      "zhangPoint": "Old Zhang points to the endless forest behind you, his tone steady and powerful:",
-      "zhangPhilosophy": "This forest is both a generous mother and a strict teacher. Everything you see, hear, and every choice you make here will not only be recorded in your research report but also engraved in the growth rings of the forest.",
-      "zhangEquipment": "He leads you into the warm cabin. On the table, a set of basic equipment has been prepared for you: a slightly old but well-maintained camera, a detailed area map, and a thick 'Field Guide to Common Flora and Fauna of the Greater Khingan Mountains'.",
-      "zhangRest": "Put down your luggage first and get familiar with the environment. Your first official survey starts tomorrow. This afternoon is yours to arrange.",
-      "zhangAdvice": "Remember, an excellent researcher needs not only knowledge but also wisdom and patience. So, what's your first step?"
+      "zhangIntro": "I'm Old Zhang, the person in charge here.",
+      "zhangIntro2": "He was brief and to the point.",
+      "zhangPoint": "Unable to contain your excitement, you point in that direction: \"Station Chief! I just saw a... white, very large animal!\"",
+      "zhangPhilosophy": "Seeing things. Every year newcomers mistake a few birch trees for monsters.",
+      "zhangReaction": "Old Zhang's eyes show no ripple of emotion. He uses the enamel mug's lid to skim off some tea leaves, not even looking up as he says:",
+      "zhangEquipment": "His tone is so flat it's almost cold, leaving no room for further questions. He turns and walks toward the cabin: \"Get your luggage. Come inside.\"",
+      "zhangRest": "You stand where you are. The forest wind is a bit cool.",
+      "zhangAdvice": "Without a doubt, he knows something."
     },
     "choices": {
       "prompt": "You need to make a choice:",
