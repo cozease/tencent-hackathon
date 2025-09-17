@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useGameStore } from "~/stores/game";
+import { useSound } from "~/composables/useSound";
 
 // 使用 i18n
 const { locale, t } = useI18n();
@@ -13,6 +14,9 @@ useHead({
 
 // 使用游戏商店
 const gameStore = useGameStore();
+
+// 使用音效
+const { playButtonSound } = useSound();
 
 // 响应式数据
 const isHovered = ref(false);
@@ -47,6 +51,7 @@ const initMusic = () => {
 
 // 切换音乐静音
 const toggleMusic = () => {
+  playButtonSound();
   isMusicMuted.value = !isMusicMuted.value;
   localStorage.setItem("musicMuted", String(isMusicMuted.value));
 
@@ -61,6 +66,7 @@ const toggleMusic = () => {
 
 // 处理开始游戏点击事件
 const handleStartGame = () => {
+  playButtonSound();
   console.log("游戏即将开始...");
   // 停止背景音乐
   if (bgMusic.value) {
@@ -84,6 +90,7 @@ onUnmounted(() => {
 
 // 切换语言 - 使用路由跳转
 const switchLanguage = async () => {
+  playButtonSound();
   const targetLocale = locale.value === "zh" ? "en" : "zh";
   await navigateTo(localePath("/", targetLocale));
 };
@@ -95,6 +102,7 @@ const currentLanguageName = computed(() => {
 
 // 重置游戏（清空图鉴收集记录）
 const handleReset = () => {
+  playButtonSound();
   gameStore.resetGameState();
   showResetModal.value = false;
   // 显示成功提示（可选）
@@ -200,16 +208,19 @@ const handleReset = () => {
             <div class="secondary-buttons flex gap-4 justify-center mt-6">
               <button
                 class="secondary-btn"
-                @click="navigateTo(localePath('/collection'))"
+                @click="
+                  playButtonSound();
+                  navigateTo(localePath('/collection'));
+                "
               >
                 <UIcon name="i-lucide-trophy" class="mr-1" />
                 {{ $t("buttons.collection") }}
               </button>
-              <button class="secondary-btn">
+              <button class="secondary-btn" @click="playButtonSound()">
                 <UIcon name="i-lucide-settings" class="mr-1" />
                 {{ $t("buttons.settings") }}
               </button>
-              <button class="secondary-btn">
+              <button class="secondary-btn" @click="playButtonSound()">
                 <UIcon name="i-lucide-info" class="mr-1" />
                 {{ $t("buttons.about") }}
               </button>
@@ -232,7 +243,13 @@ const handleReset = () => {
     </div>
 
     <!-- 重置游戏按钮 -->
-    <button class="reset-button" @click="showResetModal = true">
+    <button
+      class="reset-button"
+      @click="
+        playButtonSound();
+        showResetModal = true;
+      "
+    >
       <UIcon name="i-lucide-refresh-cw" />
       <span>{{ $t("buttons.resetGame") }}</span>
     </button>
@@ -254,7 +271,13 @@ const handleReset = () => {
           </div>
 
           <div class="modal-footer">
-            <button class="btn-cancel" @click="showResetModal = false">
+            <button
+              class="btn-cancel"
+              @click="
+                playButtonSound();
+                showResetModal = false;
+              "
+            >
               {{ $t("reset.cancel") }}
             </button>
             <button class="btn-confirm" @click="handleReset">

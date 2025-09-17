@@ -5,7 +5,13 @@
 
     <!-- 头部导航 -->
     <header class="collection-header">
-      <button class="back-button" @click="navigateTo(localePath('/'))">
+      <button
+        class="back-button"
+        @click="
+          playButtonSound();
+          navigateTo(localePath('/'));
+        "
+      >
         <UIcon name="i-lucide-arrow-left" />
         <span>{{ $t("buttons.back") || "返回" }}</span>
       </button>
@@ -109,7 +115,13 @@
               <i class="i-heroicons-academic-cap-solid" />
               小科普
             </h3>
-            <button class="wiki-modal-close" @click="showWikiModal = false">
+            <button
+              class="wiki-modal-close"
+              @click="
+                playButtonSound();
+                showWikiModal = false;
+              "
+            >
               <i class="i-heroicons-x-mark-20-solid" />
             </button>
           </div>
@@ -133,10 +145,14 @@
 import { ref, computed, onMounted } from "vue";
 import { useGameStore } from "~/stores/game";
 import { useI18n } from "vue-i18n";
+import { useSound } from "~/composables/useSound";
 
 const { locale, t } = useI18n();
 const localePath = useLocalePath();
 const gameStore = useGameStore();
+
+// 使用音效
+const { playButtonSound } = useSound();
 
 // 设置页面标题
 useHead({
@@ -207,12 +223,14 @@ const showWiki = (item: CollectionItem) => {
     // 未收集的卡牌不显示科普
     return;
   }
+  playButtonSound();
   currentWikiItem.value = item;
   showWikiModal.value = true;
 };
 
 // 打开野朋友计划网站
 const openWildFriends = () => {
+  playButtonSound();
   window.open("https://biodiversity.techforgood.qq.com/", "_blank");
 };
 

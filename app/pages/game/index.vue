@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from "vue";
 import { useGameStore } from "~/stores/game";
+import { useSound } from "~/composables/useSound";
 
 // 消息类型定义
 interface Message {
@@ -67,8 +68,12 @@ useHead({
 // 使用游戏商店
 const gameStore = useGameStore();
 
+// 使用音效
+const { playButtonSound, playCollectionSound } = useSound();
+
 // 切换语言
 const switchLanguage = async () => {
+  playButtonSound();
   const targetLocale = locale.value === "zh" ? "en" : "zh";
   await navigateTo(localePath("/game", targetLocale));
 };
@@ -163,6 +168,7 @@ const playBgMusic = (sight: string) => {
 
 // 切换静音
 const toggleMusic = () => {
+  playButtonSound();
   isMusicMuted.value = !isMusicMuted.value;
   if (bgMusic.value) {
     bgMusic.value.volume = isMusicMuted.value ? 0 : musicVolume.value;
@@ -206,6 +212,9 @@ const addMessage = async (
 
 // 处理玩家选择
 const handleChoice = async (choice: Choice) => {
+  // 播放按钮音效
+  playButtonSound();
+
   // 隐藏选项
   showChoices.value = false;
   currentChoices.value = [];
@@ -468,6 +477,7 @@ interface EventsResponse {
 // 加载收集数据
 // 分享回顾
 const shareReview = () => {
+  playButtonSound();
   // 复制到剪贴板
   if (navigator.clipboard && reviewModal.value.content) {
     navigator.clipboard
@@ -703,6 +713,9 @@ const handleEventChoice = async (choiceNum: number) => {
       const isNewCollection = gameStore.addCard(reward, collectionItem.name);
 
       if (isNewCollection) {
+        // 播放收集音效
+        playCollectionSound();
+
         // 显示收集弹窗
         collectionToast.value = {
           show: true,
@@ -849,7 +862,10 @@ onUnmounted(() => {
         <h1
           class="game-title"
           :title="$t('buttons.backToHome') || '返回主页'"
-          @click="navigateTo(localePath('/'))"
+          @click="
+            playButtonSound();
+            navigateTo(localePath('/'));
+          "
         >
           {{ $t("game.title") }}
           <i class="i-heroicons-home-20-solid home-icon" />
@@ -872,11 +888,18 @@ onUnmounted(() => {
           <button
             class="icon-btn"
             :title="$t('buttons.collection')"
-            @click="navigateTo(localePath('/collection'))"
+            @click="
+              playButtonSound();
+              navigateTo(localePath('/collection'));
+            "
           >
             <UIcon name="i-lucide-trophy" />
           </button>
-          <button class="icon-btn" :title="$t('buttons.settings')">
+          <button
+            class="icon-btn"
+            :title="$t('buttons.settings')"
+            @click="playButtonSound()"
+          >
             <UIcon name="i-lucide-settings" />
           </button>
           <button
@@ -1142,7 +1165,10 @@ onUnmounted(() => {
             <button
               class="review-button primary"
               :disabled="reviewModal.isLoading"
-              @click="navigateTo(localePath('/'))"
+              @click="
+                playButtonSound();
+                navigateTo(localePath('/'));
+              "
             >
               <UIcon name="i-heroicons-home" />
               {{ $t("buttons.back") || "回到首页" }}
