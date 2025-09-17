@@ -1,5 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  app: {
+    head: {
+      titleTemplate: "%s",
+      title: "绿野寻踪",
+    },
+  },
   runtimeConfig: {
     openaiBaseUrl:
       process.env.NUXT_OPENAI_BASE_URL || "https://api.deepseek.com",

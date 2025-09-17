@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useGameStore } from "~/stores/game";
 
 // 使用 i18n
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 const localePath = useLocalePath();
+
+// 设置页面标题
+useHead({
+  title: computed(() => t("game.title")),
+});
 
 // 使用游戏商店
 const gameStore = useGameStore();
@@ -14,12 +19,68 @@ const isHovered = ref(false);
 const isPressed = ref(false);
 const showResetModal = ref(false);
 
+// 背景音乐
+const bgMusic = ref<HTMLAudioElement | null>(null);
+const isMusicMuted = ref(false);
+
+// 初始化背景音乐
+const initMusic = () => {
+  if (typeof window !== "undefined") {
+    bgMusic.value = new Audio("/audio/bgm/start.mp3");
+    if (bgMusic.value) {
+      bgMusic.value.loop = true;
+      bgMusic.value.volume = 0.5;
+
+      // 读取音乐静音状态
+      const savedMuted = localStorage.getItem("musicMuted");
+      isMusicMuted.value = savedMuted === "true";
+
+      if (!isMusicMuted.value) {
+        bgMusic.value.play().catch(() => {
+          // 浏览器可能阻止自动播放，需要用户交互
+          console.log("自动播放被阻止，需要用户交互");
+        });
+      }
+    }
+  }
+};
+
+// 切换音乐静音
+const toggleMusic = () => {
+  isMusicMuted.value = !isMusicMuted.value;
+  localStorage.setItem("musicMuted", String(isMusicMuted.value));
+
+  if (bgMusic.value) {
+    if (isMusicMuted.value) {
+      bgMusic.value.pause();
+    } else {
+      bgMusic.value.play();
+    }
+  }
+};
+
 // 处理开始游戏点击事件
 const handleStartGame = () => {
   console.log("游戏即将开始...");
+  // 停止背景音乐
+  if (bgMusic.value) {
+    bgMusic.value.pause();
+  }
   // 跳转到游戏页面
   navigateTo(localePath("/game"));
 };
+
+// 生命周期钩子
+onMounted(() => {
+  initMusic();
+});
+
+onUnmounted(() => {
+  if (bgMusic.value) {
+    bgMusic.value.pause();
+    bgMusic.value = null;
+  }
+});
 
 // 切换语言 - 使用路由跳转
 const switchLanguage = async () => {
@@ -32,13 +93,15 @@ const currentLanguageName = computed(() => {
   return locale.value === "zh" ? "中文" : "EN";
 });
 
-// 重置游戏
+// 重置游戏（清空图鉴收集记录）
 const handleReset = () => {
   gameStore.resetGameState();
   showResetModal.value = false;
   // 显示成功提示（可选）
   console.log(
-    locale.value === "zh" ? "游戏进度已重置" : "Game progress has been reset"
+    locale.value === "zh"
+      ? "图鉴收集进度已重置"
+      : "Collection progress has been reset"
   );
 };
 </script>
@@ -64,13 +127,27 @@ const handleReset = () => {
         <div class="flex items-center justify-between">
           <!-- 游戏Logo/标题 -->
           <div class="game-title-wrapper">
-            <h1 class="game-title text-4xl font-bold">
+            <h1 class="game-title text-5xl font-bold">
               <span class="title-text">{{ $t("game.title") }}</span>
             </h1>
             <div class="title-subtitle text-sm opacity-80 mt-1">
               {{ $t("game.subtitle") }}
             </div>
           </div>
+
+          <!-- 音乐控制按钮 -->
+          <button
+            class="music-toggle"
+            :class="{ muted: isMusicMuted }"
+            :title="
+              isMusicMuted ? $t('buttons.unmuteMusic') : $t('buttons.muteMusic')
+            "
+            @click="toggleMusic"
+          >
+            <UIcon
+              :name="isMusicMuted ? 'i-lucide-volume-x' : 'i-lucide-volume-2'"
+            />
+          </button>
 
           <!-- 语言切换按钮 -->
           <div class="language-switcher">
@@ -88,9 +165,7 @@ const handleReset = () => {
           <!-- 游戏Logo占位区域 -->
           <div class="logo-placeholder mb-12">
             <div class="logo-box mx-auto">
-              <UIcon name="i-lucide-trees" class="text-8xl text-green-400" />
-              <!-- 未来可以替换为游戏Logo图片 -->
-              <!-- <img src="/images/game-logo.png" alt="游戏Logo" class="w-64 h-64 mx-auto" /> -->
+              <img src="/logo.png" alt="绿野寻踪" class="logo-image" />
             </div>
             <p class="mt-4 text-lg opacity-90">
               {{ $t("game.slogan") }}
@@ -195,8 +270,14 @@ const handleReset = () => {
 <style scoped>
 /* 游戏容器样式 */
 .game-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+      135deg,
+      rgba(102, 126, 234, 0.5) 0%,
+      rgba(118, 75, 162, 0.5) 100%
+    ),
+    url("/start.jpg") center center / cover no-repeat fixed;
   font-family: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
 }
 
 /* 背景渐变 */
@@ -233,9 +314,38 @@ const handleReset = () => {
   animation: glow 2s ease-in-out infinite alternate;
 }
 
+/* 音乐控制按钮 */
+.music-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.music-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.music-toggle.muted {
+  opacity: 0.6;
+}
+
 /* 语言切换按钮样式 */
 .language-switcher {
   position: relative;
+  margin-left: 12px;
 }
 
 .lang-btn {
@@ -274,18 +384,133 @@ const handleReset = () => {
   }
 }
 
-/* Logo占位框 */
+/* Logo容器 */
 .logo-box {
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
   animation: breathe 3s ease-in-out infinite;
+}
+
+/* 外层光晕 */
+.logo-box::before {
+  content: "";
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(
+    circle,
+    rgba(74, 222, 128, 0.15) 0%,
+    rgba(34, 197, 94, 0.08) 40%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  filter: blur(25px);
+  animation: pulseGlow 4s ease-in-out infinite;
+  z-index: -1;
+}
+
+/* 内层柔光边框 */
+.logo-box::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 50%
+  );
+  border-radius: 50%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.logo-image {
+  width: 90%;
+  height: 85%;
+  object-fit: contain;
+  border-radius: 50%;
+  filter: brightness(1.05) drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 30px rgba(74, 222, 128, 0.25));
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  position: relative;
+
+  /* 渐变淡入遮罩 */
+  mask-image: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.9) 50%,
+    rgba(0, 0, 0, 0.5) 70%,
+    rgba(0, 0, 0, 0) 90%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.9) 50%,
+    rgba(0, 0, 0, 0.5) 70%,
+    rgba(0, 0, 0, 0) 90%
+  );
+  animation: fadeInLogo 1.5s ease-out;
+}
+
+@keyframes fadeInLogo {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: brightness(1.05) blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1.05) drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))
+      drop-shadow(0 0 30px rgba(74, 222, 128, 0.25));
+  }
+}
+
+.logo-box:hover .logo-image {
+  transform: scale(1.08) translateY(-2px);
+  filter: brightness(1.1) drop-shadow(0 15px 35px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 0 45px rgba(74, 222, 128, 0.4));
+  mask-image: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 1) 40%,
+    rgba(0, 0, 0, 0.95) 60%,
+    rgba(0, 0, 0, 0.6) 75%,
+    rgba(0, 0, 0, 0) 95%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 1) 40%,
+    rgba(0, 0, 0, 0.95) 60%,
+    rgba(0, 0, 0, 0.6) 75%,
+    rgba(0, 0, 0, 0) 95%
+  );
+}
+
+/* 光晕脉动动画 */
+@keyframes pulseGlow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* 光晕旋转动画 */
+@keyframes rotateGlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes breathe {
@@ -580,8 +805,12 @@ const handleReset = () => {
   }
 
   .logo-box {
-    width: 150px;
-    height: 150px;
+    width: 160px;
+    height: 160px;
+  }
+
+  .logo-box::before {
+    inset: -20px;
   }
 
   .start-game-btn {

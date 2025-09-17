@@ -15,7 +15,8 @@
     "reviewCopyFailed": "Failed to copy. Please copy the content manually.",
     "reviewCopiedShort": "Copied",
     "reviewCopyFailedShort": "Copy failed",
-    "unlockedCards": "Cards Newly Unlocked This Journey"
+    "unlockedCards": "Cards Newly Unlocked This Journey",
+    "wisdomQuote": "All choices are correct, as long as you remember why you set out."
   },
   "buttons": {
     "startGame": "Start Game",
@@ -24,16 +25,17 @@
     "about": "About",
     "resetGame": "Reset Game",
     "back": "Back",
+    "backToHome": "Back to Home",
     "share": "Share",
     "muteMusic": "Mute",
     "unmuteMusic": "Unmute"
   },
   "reset": {
     "title": "Confirm Reset",
-    "message": "Are you sure you want to clear your game progress? This will reset your coins and inventory.",
+    "message": "Are you sure you want to reset your game progress? This will reset your collection progress.",
     "confirm": "Confirm Reset",
     "cancel": "Cancel",
-    "success": "Game progress has been reset"
+    "success": "Collection progress has been reset"
   },
   "language": {
     "switch": "Switch Language",

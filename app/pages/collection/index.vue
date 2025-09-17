@@ -45,7 +45,9 @@
           :class="{
             collected: gameStore.hasCollected(item.id),
             uncollected: !gameStore.hasCollected(item.id),
+            clickable: gameStore.hasCollected(item.id),
           }"
+          @click="showWiki(item)"
         >
           <div class="card-image-wrapper">
             <img
@@ -93,6 +95,37 @@
         </div>
       </div>
     </main>
+
+    <!-- 科普弹窗 -->
+    <Transition name="modal-fade">
+      <div
+        v-if="showWikiModal"
+        class="wiki-modal-overlay"
+        @click="showWikiModal = false"
+      >
+        <div class="wiki-modal-container" @click.stop>
+          <div class="wiki-modal-header">
+            <h3 class="wiki-modal-title">
+              <i class="i-heroicons-academic-cap-solid" />
+              小科普
+            </h3>
+            <button class="wiki-modal-close" @click="showWikiModal = false">
+              <i class="i-heroicons-x-mark-20-solid" />
+            </button>
+          </div>
+          <div v-if="currentWikiItem" class="wiki-modal-content">
+            <h4 class="wiki-item-name">{{ currentWikiItem.name }}</h4>
+            <p class="wiki-item-text">{{ currentWikiItem.wiki }}</p>
+          </div>
+          <div class="wiki-modal-footer">
+            <button class="wiki-link-button" @click="openWildFriends">
+              去「野朋友计划」了解更多
+              <i class="i-heroicons-arrow-right-20-solid" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -101,15 +134,21 @@ import { ref, computed, onMounted } from "vue";
 import { useGameStore } from "~/stores/game";
 import { useI18n } from "vue-i18n";
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 const localePath = useLocalePath();
 const gameStore = useGameStore();
+
+// 设置页面标题
+useHead({
+  title: computed(() => t("game.title")),
+});
 
 // 收集品数据类型
 interface CollectionItem {
   id: number;
   name: string;
   description: string;
+  wiki: string;
   rarity: string;
   imageFile?: string;
 }
@@ -117,6 +156,10 @@ interface CollectionItem {
 // 状态
 const collections = ref<CollectionItem[]>([]);
 const loading = ref(true);
+
+// 弹窗相关
+const showWikiModal = ref(false);
+const currentWikiItem = ref<CollectionItem | null>(null);
 
 // 计算属性
 const collectedCount = computed(() => gameStore.getCollectedCount());
@@ -156,6 +199,21 @@ const loadCollections = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// 显示科普弹窗
+const showWiki = (item: CollectionItem) => {
+  if (!gameStore.hasCollected(item.id)) {
+    // 未收集的卡牌不显示科普
+    return;
+  }
+  currentWikiItem.value = item;
+  showWikiModal.value = true;
+};
+
+// 打开野朋友计划网站
+const openWildFriends = () => {
+  window.open("https://biodiversity.techforgood.qq.com/", "_blank");
 };
 
 // 页面加载时获取数据
@@ -513,6 +571,282 @@ onMounted(() => {
   .rarity-badge {
     font-size: 0.6rem;
     padding: 0.1rem 0.4rem;
+  }
+}
+
+/* 可点击卡片样式 */
+.collection-card.clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.collection-card.clickable:hover {
+  transform: translateY(-4px);
+}
+
+/* 科普弹窗样式 */
+.wiki-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 20, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.wiki-modal-container {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  backdrop-filter: blur(30px) saturate(150%) brightness(1.1);
+  -webkit-backdrop-filter: blur(30px) saturate(150%) brightness(1.1);
+  border-radius: 24px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 80px rgba(34, 197, 94, 0.1);
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.wiki-modal-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.5),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.wiki-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wiki-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.wiki-modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 1.25rem;
+  color: rgba(107, 114, 128, 0.9);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 12px;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.wiki-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #374151;
+  transform: scale(1.05);
+}
+
+.wiki-modal-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* 自定义滚动条 */
+.wiki-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wiki-modal-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.wiki-modal-content::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.3);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wiki-modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.5);
+}
+
+.wiki-item-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(34, 197, 94, 0.4);
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 20px rgba(34, 197, 94, 0.2);
+}
+
+.wiki-item-text {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: justify;
+  white-space: pre-wrap;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.wiki-modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.wiki-link-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(
+    135deg,
+    rgba(74, 222, 128, 0.9) 0%,
+    rgba(34, 197, 94, 0.9) 100%
+  );
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.wiki-link-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.wiki-link-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  filter: brightness(1.1);
+}
+
+.wiki-link-button:hover::before {
+  left: 100%;
+}
+
+.wiki-link-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* 弹窗动画 */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .wiki-modal-container,
+.modal-fade-leave-active .wiki-modal-container {
+  transition: transform 0.3s ease;
+}
+
+.modal-fade-enter-from .wiki-modal-container {
+  transform: scale(0.9) translateY(20px);
+}
+
+.modal-fade-leave-to .wiki-modal-container {
+  transform: scale(0.9) translateY(20px);
+}
+
+/* 响应式优化 */
+@media (max-width: 640px) {
+  .wiki-modal-container {
+    max-height: 90vh;
+    margin: 1rem;
+  }
+
+  .wiki-modal-header {
+    padding: 1rem;
+  }
+
+  .wiki-modal-content {
+    padding: 1rem;
+  }
+
+  .wiki-modal-footer {
+    padding: 1rem;
+  }
+
+  .wiki-link-button {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

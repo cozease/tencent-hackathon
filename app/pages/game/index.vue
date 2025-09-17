@@ -59,6 +59,11 @@ const collectionsLoaded = ref(false);
 const { locale, t } = useI18n();
 const localePath = useLocalePath();
 
+// 设置页面标题
+useHead({
+  title: computed(() => t("game.title")),
+});
+
 // 使用游戏商店
 const gameStore = useGameStore();
 
@@ -240,11 +245,6 @@ const startGameSequence = async () => {
   gameStore.restoreStamina();
   gameStore.clearJourney();
 
-  // 如果是第一次玩，给一些初始金币
-  if (gameStore.coins === 0) {
-    gameStore.addCoins(100);
-  }
-
   // 场景描述 - 开场动画
   await addMessage(
     {
@@ -260,8 +260,8 @@ const startGameSequence = async () => {
       type: "narrator",
       content: t("story.intro.welcome"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   // 场景转换
   await addMessage(
@@ -269,8 +269,8 @@ const startGameSequence = async () => {
       type: "scene",
       content: t("story.intro.sceneLabel"),
     },
-    0
-  ); //1500)
+    600
+  );
 
   // 叙述
   await addMessage(
@@ -278,24 +278,24 @@ const startGameSequence = async () => {
       type: "narrator",
       content: t("story.intro.arrival1"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   await addMessage(
     {
       type: "narrator",
       content: t("story.intro.arrival2"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   await addMessage(
     {
       type: "narrator",
       content: t("story.intro.arrival3"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   // 老张出场
   await addMessage(
@@ -305,15 +305,15 @@ const startGameSequence = async () => {
       content: t("story.npc.zhangIntro"),
       avatar: "👨‍🌾",
     },
-    0
-  ); //2000)
+    1000
+  );
 
   await addMessage(
     {
       type: "narrator",
       content: t("story.npc.zhangIntro2"),
     },
-    0
+    1000
   );
 
   // 玩家问话
@@ -323,8 +323,8 @@ const startGameSequence = async () => {
       speaker: t("story.characters.player"),
       content: t("story.npc.zhangPoint"),
     },
-    0
-  ); //1500)
+    600
+  );
 
   // 老张的反应描述
   await addMessage(
@@ -343,8 +343,8 @@ const startGameSequence = async () => {
       content: t("story.npc.zhangPhilosophy"),
       avatar: "👨‍🌾",
     },
-    0
-  ); //2500)
+    1000
+  );
 
   // 叙述
   await addMessage(
@@ -352,24 +352,24 @@ const startGameSequence = async () => {
       type: "narrator",
       content: t("story.npc.zhangEquipment"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   await addMessage(
     {
       type: "narrator",
       content: t("story.npc.zhangRest"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   await addMessage(
     {
       type: "narrator",
       content: t("story.npc.zhangAdvice"),
     },
-    0
-  ); //2000)
+    1000
+  );
 
   // 第一个选择
   await addMessage(
@@ -616,8 +616,10 @@ const showEvent = async (eventId: number) => {
     1000
   );
 
-  // 特殊处理事件1（结束事件）
-  if (event.id === 1) {
+  // 特殊处理结束事件（事件1、13、14）
+  const isEndingEvent = [1, 13, 14].includes(event.id);
+
+  if (isEndingEvent) {
     // 生成并显示行程回顾
     await generateReview();
   } else if (event.choice1 && event.choice1 !== "0") {
@@ -730,19 +732,6 @@ const handleEventChoice = async (choiceNum: number) => {
   // 显示继续探险的选择
   const adventureChoices: Choice[] = [];
 
-  // 总是显示结束探险选项
-  adventureChoices.push({
-    id: "end",
-    label: "结束探险",
-    description: "结束今天的探险",
-    action: async () => {
-      showChoices.value = false;
-      // 恢复体力
-      gameStore.restoreStamina();
-      await showEvent(1); // 跳转到事件1
-    },
-  });
-
   // 只有还有体力时才显示继续探险选项
   if (gameStore.hasStamina()) {
     adventureChoices.push({
@@ -769,6 +758,19 @@ const handleEventChoice = async (choiceNum: number) => {
       1000
     );
   }
+
+  // 总是显示结束探险选项（放在继续探险下方）
+  adventureChoices.push({
+    id: "end",
+    label: "结束探险",
+    description: "结束今天的探险",
+    action: async () => {
+      showChoices.value = false;
+      // 恢复体力
+      gameStore.restoreStamina();
+      await showEvent(1); // 跳转到事件1
+    },
+  });
 
   // 延迟显示选择
   setTimeout(() => {
@@ -844,7 +846,14 @@ onUnmounted(() => {
     <!-- 游戏头部 -->
     <header class="game-header">
       <div class="header-content">
-        <h1 class="game-title">{{ $t("game.title") }}</h1>
+        <h1
+          class="game-title"
+          :title="$t('buttons.backToHome') || '返回主页'"
+          @click="navigateTo(localePath('/'))"
+        >
+          {{ $t("game.title") }}
+          <i class="i-heroicons-home-20-solid home-icon" />
+        </h1>
 
         <!-- 体力值显示（居中） -->
         <div class="stamina-display">
@@ -1115,6 +1124,16 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
+
+              <!-- 哲理金句 -->
+              <div class="wisdom-quote">
+                <span class="quote-text">
+                  {{
+                    $t("game.wisdomQuote") ||
+                    "所有选择都是正确的，只要你还记得为什么出发。"
+                  }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1342,12 +1361,57 @@ onUnmounted(() => {
 }
 
 .game-title {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: bold;
-  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-block;
+  position: relative;
+  text-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
+.game-title:hover {
+  transform: translateY(-2px) scale(1.05);
+  filter: brightness(1.2);
+}
+
+.game-title:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.game-title::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+  transition: width 0.3s ease;
+}
+
+.game-title:hover::after {
+  width: 100%;
+}
+
+.home-icon {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.9em;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  vertical-align: middle;
+}
+
+.game-title:hover .home-icon {
+  opacity: 1;
+  transform: translateX(3px);
 }
 
 .header-actions {
@@ -1799,12 +1863,12 @@ onUnmounted(() => {
 /* 事件图片容器（左侧） */
 .event-image-container {
   position: fixed;
-  left: 16rem; /* 往右移动，避开悬浮按钮 */
+  left: 25%; /* 固定在屏幕左侧四分之一位置 */
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%); /* 同时水平和垂直居中 */
   z-index: 15;
   max-width: 600px; /* 放大图片 */
-  width: 50vw; /* 放大比例 */
+  width: 40vw; /* 调整宽度确保不超过左半屏 */
 }
 
 .event-image {
@@ -1978,6 +2042,10 @@ onUnmounted(() => {
     width: 100%;
     text-align: center;
     font-size: 1.25rem;
+  }
+
+  .game-title::after {
+    display: none; /* 移动端隐藏下划线动画 */
   }
 
   .event-image-container {
@@ -2610,6 +2678,56 @@ onUnmounted(() => {
   border-color: rgba(34, 197, 94, 0.5);
 }
 
+/* 哲理金句 */
+.wisdom-quote {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  text-align: center;
+  position: relative;
+}
+
+.wisdom-quote::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 200, 0.3) 20%,
+    rgba(255, 255, 200, 0.5) 50%,
+    rgba(255, 255, 200, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+.quote-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #8b8b13;
+  text-shadow: 0 0 20px rgba(255, 255, 0, 0.9), 0 0 40px rgba(255, 255, 0, 0.6),
+    0 0 60px rgba(255, 255, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  display: inline-block;
+  position: relative;
+  animation: glowPulse 3s ease-in-out infinite;
+  padding: 0.5rem 1rem;
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 15px rgba(255, 255, 0, 0.6));
+  }
+  50% {
+    filter: brightness(1.1) drop-shadow(0 0 25px rgba(255, 255, 0, 0.8));
+  }
+}
+
 /* 页脚 */
 .review-footer {
   position: relative;
@@ -2880,6 +2998,20 @@ onUnmounted(() => {
   .unlocked-cards-section {
     margin-top: 1.5rem;
     padding-top: 1rem;
+  }
+
+  .wisdom-quote {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+
+  .wisdom-quote::before {
+    width: 80%;
+  }
+
+  .quote-text {
+    font-size: 0.95rem;
+    padding: 0 1rem;
   }
 }
 </style>

@@ -15,7 +15,8 @@
     "reviewCopyFailed": "复制失败，请手动复制内容",
     "reviewCopiedShort": "已复制",
     "reviewCopyFailedShort": "复制失败",
-    "unlockedCards": "本次新解锁的图鉴"
+    "unlockedCards": "本次新解锁的图鉴",
+    "wisdomQuote": "所有选择都是正确的，只要你还记得为什么出发。"
   },
   "buttons": {
     "startGame": "开始游戏",
@@ -24,16 +25,17 @@
     "about": "关于",
     "resetGame": "重置游戏",
     "back": "返回",
+    "backToHome": "返回主页",
     "share": "分享",
     "muteMusic": "静音",
     "unmuteMusic": "开启音乐"
   },
   "reset": {
     "title": "确认重置",
-    "message": "确定要清空游戏进度吗？这将重置你的金币和背包。",
+    "message": "确定重置游戏进度吗？这将重置你图鉴的收集进度。",
     "confirm": "确认重置",
     "cancel": "取消",
-    "success": "游戏进度已重置"
+    "success": "图鉴收集进度已重置"
   },
   "language": {
     "switch": "切换语言",
