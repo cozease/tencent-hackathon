@@ -1,11 +1,11 @@
-# 绿野寻踪
+# 寻踪
 
 [![Nuxt](https://img.shields.io/badge/Nuxt-00DC82?style=for-the-badge&logo=nuxt.js&logoColor=white)](https://nuxt.com/)
 [![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Pinia](https://img.shields.io/badge/Pinia-FFD700?style=for-the-badge&logo=pinia&logoColor=black)](https://pinia.vuejs.org/)
 
-**绿野寻踪** 是一款基于 Nuxt.js 构建的文字冒险和收集养成游戏。玩家在游戏中扮演一名深入神秘森林的探索者，通过一系列选择与森林互动，邂逅各种野生动植物，并最终解锁关于这片土地秘密的个性化回忆。
+**寻踪** 是一款基于 Nuxt.js 构建的文字冒险和收集养成游戏。玩家在游戏中扮演一名深入神秘森林的探索者，通过一系列选择与森林互动，邂逅各种野生动植物，并最终解锁关于这片土地秘密的个性化回忆。
 
 游戏旨在通过引人入胜的故事情节和互动体验，向玩家传递生物多样性保护的知识和理念，鼓励玩家成为“野朋友计划”的一员，关注并保护我们身边的自然。
 

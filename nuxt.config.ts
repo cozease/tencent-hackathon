@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       titleTemplate: "%s",
-      title: "绿野寻踪",
+      title: "寻踪",
     },
   },
   runtimeConfig: {
