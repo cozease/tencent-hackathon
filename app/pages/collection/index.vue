@@ -56,12 +56,18 @@
           @click="showWiki(item)"
         >
           <div class="card-image-wrapper">
+            <CardMedia
+              v-if="gameStore.hasCollected(item.id)"
+              :card-id="item.id"
+              :alt="item.name"
+              media-class="card-image"
+              :absolute-fill="true"
+            />
             <img
-              v-if="item.imageFile"
+              v-else-if="item.imageFile"
               :src="item.imageFile"
               :alt="item.name"
-              class="card-image"
-              :class="{ grayscale: !gameStore.hasCollected(item.id) }"
+              class="card-image grayscale"
             />
             <div v-else class="card-placeholder">
               <UIcon name="i-lucide-image-off" />

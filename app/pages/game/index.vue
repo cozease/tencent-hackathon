@@ -105,6 +105,7 @@ const collectionToast = ref({
   show: false,
   name: "",
   imageFile: "",
+  cardId: 0,
 });
 
 // 行程回顾弹窗状态
@@ -325,36 +326,77 @@ const startGameSequence = async () => {
     1000
   );
 
-  // 玩家问话
+  // 给玩家一个选择：是否提及看到的白色巨兽
   await addMessage(
     {
-      type: "player",
-      speaker: t("story.characters.player"),
-      content: t("story.npc.zhangPoint"),
-    },
-    600
-  );
+      type: "choice",
+      content: t("story.choices.firstMeeting"),
+      choices: [
+        {
+          id: "mention_beast",
+          label: t("story.choices.mentionBeast.label"),
+          description: t("story.choices.mentionBeast.description"),
+          action: async () => {
+            // 玩家提及白色巨兽
+            await addMessage(
+              {
+                type: "player",
+                speaker: t("story.characters.player"),
+                content: t("story.npc.zhangPoint"),
+              },
+              600
+            );
 
-  // 老张的反应描述
-  await addMessage(
-    {
-      type: "narrator",
-      content: t("story.npc.zhangReaction"),
-    },
-    0
-  );
+            // 老张的反应描述
+            await addMessage(
+              {
+                type: "narrator",
+                content: t("story.npc.zhangReaction"),
+              },
+              1000
+            );
 
-  // 老张回答
-  await addMessage(
-    {
-      type: "npc",
-      speaker: t("story.characters.zhang"),
-      content: t("story.npc.zhangPhilosophy"),
-      avatar: "👨‍🌾",
+            // 老张回答
+            await addMessage(
+              {
+                type: "npc",
+                speaker: t("story.characters.zhang"),
+                content: t("story.npc.zhangPhilosophy"),
+                avatar: "👨‍🌾",
+              },
+              1000
+            );
+
+            // 继续后续对话
+            await continueAfterFirstChoice();
+          },
+        },
+        {
+          id: "stay_silent",
+          label: t("story.choices.staySilent.label"),
+          description: t("story.choices.staySilent.description"),
+          action: async () => {
+            // 玩家保持沉默
+            await addMessage(
+              {
+                type: "narrator",
+                content: t("story.choices.staySilent.narration"),
+              },
+              1000
+            );
+
+            // 继续后续对话
+            await continueAfterFirstChoice();
+          },
+        },
+      ],
     },
     1000
   );
+};
 
+// 第一个选择后的共同流程
+const continueAfterFirstChoice = async () => {
   // 叙述
   await addMessage(
     {
@@ -721,6 +763,7 @@ const handleEventChoice = async (choiceNum: number) => {
           show: true,
           name: collectionItem.name,
           imageFile: collectionItem.imageFile || "",
+          cardId: reward,
         };
 
         // 3秒后自动隐藏
@@ -1043,8 +1086,14 @@ onUnmounted(() => {
             <UIcon name="i-heroicons-trophy" />
           </div>
           <div class="toast-body">
+            <CardMedia
+              v-if="collectionToast.cardId"
+              :card-id="collectionToast.cardId"
+              :alt="collectionToast.name"
+              media-class="toast-image"
+            />
             <img
-              v-if="collectionToast.imageFile"
+              v-else-if="collectionToast.imageFile"
               :src="collectionToast.imageFile"
               :alt="collectionToast.name"
               class="toast-image"
@@ -1138,11 +1187,10 @@ onUnmounted(() => {
                     :key="card.id"
                     class="unlocked-card-item"
                   >
-                    <img
-                      :src="`/collections/${card.id}.png`"
+                    <CardMedia
+                      :card-id="card.id"
                       :alt="card.name"
-                      class="unlocked-card-image"
-                      @error="(e) => (e.target as HTMLImageElement).src = '/collections/placeholder.png'"
+                      media-class="unlocked-card-image"
                     />
                   </div>
                 </div>

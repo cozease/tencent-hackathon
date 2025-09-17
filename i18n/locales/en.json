@@ -46,22 +46,32 @@
       "scene": "Accompanied by long and tranquil background music, the camera passes through layers of golden Dahurian larch forests. Sunlight filters through the leaves, casting dappled spots of light. The camera slowly zooms in, finally focusing on a small wooden cabin in a forest clearing, with smoke curling up from the chimney.",
       "welcome": "Welcome to the Greater Khingan Mountains.",
       "sceneLabel": "[Scene: Outside the Protection Station Base Camp]",
-      "arrival1": "The long-distance bus stops in front of you. The door opens, and a crisp air mixed with pine needles and earth rushes toward you.",
+      "arrival1": "The long-distance bus stops in front of you. The door opens, and a crisp air mixed with pine needles and earth rushes toward you. As a newly appointed forest ranger, this is your first time stepping onto this ancient land.",
       "arrival2": "Just as you shoulder your pack, at the edge of the tree line in the distance, a massive snow-white beast flashes by. Sunlight reflects off it in a blinding halo. You don't even catch its full form, only a shocking silhouette.",
-      "arrival3": "With a creak, the cabin door opens. A middle-aged man with tanned skin walks out, his eyes sharp."
+      "arrival3": "With a creak, the cabin door opens. A middle-aged man with tanned skin walks out, his eyes sharp. The lines on his face resemble ancient tree bark, revealing the accumulation of years."
     },
     "npc": {
-      "zhangIntro": "I'm Old Zhang, the person in charge here.",
-      "zhangIntro2": "He was brief and to the point.",
+      "zhangIntro": "I'm Old Zhang, the person in charge here. We Oroqen people have guarded this forest for generations.",
+      "zhangIntro2": "He was brief and to the point, his voice carrying the steadiness unique to the mountains.",
       "zhangPoint": "Unable to contain your excitement, you point in that direction: \"Station Chief! I just saw a... white, very large animal!\"",
       "zhangPhilosophy": "Seeing things. Every year newcomers mistake a few birch trees for monsters.",
       "zhangReaction": "Old Zhang's eyes show no ripple of emotion. He uses the enamel mug's lid to skim off some tea leaves, not even looking up as he says:",
-      "zhangEquipment": "His tone is so flat it's almost cold, leaving no room for further questions. He turns and walks toward the cabin: \"Get your luggage. Come inside.\"",
-      "zhangRest": "You stand where you are. The forest wind is a bit cool.",
-      "zhangAdvice": "Without a doubt, he knows something."
+      "zhangEquipment": "His tone is so flat it's almost cold, leaving no room for further questions. He turns and walks toward the cabin: \"Get your luggage. Come inside. New forest rangers need to learn the rules here first.\"",
+      "zhangRest": "You stand where you are. The forest wind is a bit cool. Old Zhang's silhouette reminds you of the legendary forest guardians.",
+      "zhangAdvice": "Without a doubt, as an elder of the Oroqen people, his understanding of this forest far exceeds that of ordinary people."
     },
     "choices": {
       "prompt": "You need to make a choice:",
+      "firstMeeting": "How will you respond?",
+      "mentionBeast": {
+        "label": "[Mention the white beast you just saw]",
+        "description": "Tell Old Zhang about the strange sight you just witnessed"
+      },
+      "staySilent": {
+        "label": "[Stay silent and observe]",
+        "description": "(Don't mention it for now, see what kind of person this elder is)",
+        "narration": "You choose not to mention the strange sight you just witnessed, instead carefully observing this Oroqen elder before you. Old Zhang doesn't seem surprised by your silence, merely nodding slightly."
+      },
       "checkEquipment": {
         "label": "[Check Equipment Carefully]",
         "description": "A craftsman must sharpen his tools. Let me familiarize myself with how to use this equipment."

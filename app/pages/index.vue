@@ -138,7 +138,7 @@ const handleReset = () => {
             <h1 class="game-title text-5xl font-bold">
               <span class="title-text">{{ $t("game.title") }}</span>
             </h1>
-            <div class="title-subtitle text-sm opacity-80 mt-1">
+            <div class="title-subtitle text-sm mt-1">
               {{ $t("game.subtitle") }}
             </div>
           </div>
@@ -175,7 +175,7 @@ const handleReset = () => {
             <div class="logo-box mx-auto">
               <img src="/logo.png" alt="寻踪" class="logo-image" />
             </div>
-            <p class="mt-4 text-lg opacity-90">
+            <p class="game-slogan mt-4 text-lg">
               {{ $t("game.slogan") }}
             </p>
           </div>
@@ -230,7 +230,7 @@ const handleReset = () => {
       </main>
 
       <!-- 底部装饰区域 -->
-      <footer class="game-footer py-4 text-center opacity-60">
+      <footer class="game-footer py-4 text-center">
         <p class="text-sm">{{ $t("game.footer") }}</p>
       </footer>
     </div>
@@ -291,6 +291,26 @@ const handleReset = () => {
 </template>
 
 <style scoped>
+/* 固定的白色样式 */
+.title-subtitle {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.game-slogan {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.game-footer {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.game-footer p {
+  color: #ffffff;
+}
+
 /* 游戏容器样式 */
 .game-container {
   background: linear-gradient(
