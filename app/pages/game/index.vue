@@ -837,6 +837,9 @@ const handleEventChoice = async (choiceNum: number) => {
 
 // 组件挂载时自动开始
 onMounted(async () => {
+  // 确保从 localStorage 加载游戏状态
+  gameStore.loadFromStorage();
+
   // 加载音量设置
   const savedMuted = localStorage.getItem("gameMusicMuted");
   const savedVolume = localStorage.getItem("gameMusicVolume");
@@ -2171,7 +2174,8 @@ onUnmounted(() => {
   );
   border: 2px solid rgba(255, 215, 0, 0.6);
   border-radius: 20px;
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.25rem;
+  min-width: 320px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.3),
     inset 0 0 20px rgba(255, 215, 0, 0.1);
   animation: collectionGlow 2s ease-in-out infinite;
@@ -2191,44 +2195,53 @@ onUnmounted(() => {
 .toast-body {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .toast-image {
-  width: 60px;
-  height: 90px;
+  width: 50px;
+  height: 75px;
   object-fit: cover;
   border-radius: 8px;
   border: 2px solid rgba(255, 215, 0, 0.4);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .toast-text {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
+  min-width: 150px;
 }
 
 .toast-title {
   color: #ffd700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: bold;
   margin: 0;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  white-space: nowrap;
 }
 
 .toast-name {
   color: white;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   margin: 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
 }
 
 .toast-hint {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   margin: 0;
+  white-space: nowrap;
 }
 
 /* 弹窗动画 */

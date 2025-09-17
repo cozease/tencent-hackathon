@@ -242,6 +242,8 @@ const openWildFriends = () => {
 
 // 页面加载时获取数据
 onMounted(() => {
+  // 确保从 localStorage 加载最新的收集状态
+  gameStore.loadFromStorage();
   loadCollections();
 });
 </script>

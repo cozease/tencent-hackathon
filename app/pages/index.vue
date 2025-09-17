@@ -22,6 +22,7 @@ const { playButtonSound } = useSound();
 const isHovered = ref(false);
 const isPressed = ref(false);
 const showResetModal = ref(false);
+const showAboutModal = ref(false);
 
 // 背景音乐
 const bgMusic = ref<HTMLAudioElement | null>(null);
@@ -78,6 +79,8 @@ const handleStartGame = () => {
 
 // 生命周期钩子
 onMounted(() => {
+  // 确保从 localStorage 加载游戏状态
+  gameStore.loadFromStorage();
   initMusic();
 });
 
@@ -220,7 +223,13 @@ const handleReset = () => {
                 <UIcon name="i-lucide-settings" class="mr-1" />
                 {{ $t("buttons.settings") }}
               </button>
-              <button class="secondary-btn" @click="playButtonSound()">
+              <button
+                class="secondary-btn"
+                @click="
+                  playButtonSound();
+                  showAboutModal = true;
+                "
+              >
                 <UIcon name="i-lucide-info" class="mr-1" />
                 {{ $t("buttons.about") }}
               </button>
@@ -283,6 +292,100 @@ const handleReset = () => {
             <button class="btn-confirm" @click="handleReset">
               {{ $t("reset.confirm") }}
             </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 关于弹窗 -->
+    <Transition name="modal-fade">
+      <div
+        v-if="showAboutModal"
+        class="about-modal-overlay"
+        @click="showAboutModal = false"
+      >
+        <div class="about-modal" @click.stop>
+          <button
+            class="modal-close-btn"
+            @click="
+              playButtonSound();
+              showAboutModal = false;
+            "
+          >
+            <UIcon name="i-lucide-x" />
+          </button>
+
+          <div class="about-header">
+            <h2 class="about-title">
+              <span class="title-green">{{
+                locale === "zh" ? "寻" : "Oroqen's "
+              }}</span>
+              <span class="title-white">{{
+                locale === "zh" ? "踪" : "Path"
+              }}</span>
+            </h2>
+          </div>
+
+          <div class="about-content">
+            <!-- 游戏介绍 -->
+            <section class="about-section">
+              <p class="about-intro">
+                {{
+                  locale === "zh"
+                    ? "寻踪 是一款基于 Nuxt.js 构建的文字冒险和收集养成游戏。玩家在游戏中扮演一名深入神秘森林的探索者，通过一系列选择与森林互动，邂逅各种野生动植物，并最终解锁关于这片土地秘密的个性化回忆。"
+                    : "Oroqen's Path is a text adventure and collection game built with Nuxt.js. Players take on the role of an explorer venturing into mysterious forests, interacting through choices, encountering wildlife, and ultimately unlocking personalized memories about the land's secrets."
+                }}
+              </p>
+              <p class="about-mission">
+                {{
+                  locale === "zh"
+                    ? '游戏旨在通过引人入胜的故事情节和互动体验，向玩家传递生物多样性保护的知识和理念，鼓励玩家成为"野朋友计划"的一员，关注并保护我们身边的自然。'
+                    : 'Through engaging storylines and interactive experiences, the game aims to convey knowledge and concepts about biodiversity conservation, encouraging players to become part of the "Wild Friends Program" and care for nature around us.'
+                }}
+              </p>
+            </section>
+
+            <!-- 开发团队 -->
+            <section class="about-section team-section">
+              <div class="team-badge">
+                <UIcon name="i-lucide-users" />
+                <span>{{
+                  locale === "zh" ? "开发团队" : "Development Team"
+                }}</span>
+              </div>
+              <p class="team-name">
+                {{
+                  locale === "zh"
+                    ? "上海交通大学 CSE 战队"
+                    : "Shanghai Jiao Tong University CSE Team"
+                }}
+              </p>
+            </section>
+
+            <!-- GitHub -->
+            <section class="about-section github-section">
+              <p class="github-text">
+                {{
+                  locale === "zh"
+                    ? "觉得不错的话，欢迎给我们的项目点点 star！"
+                    : "If you like it, please give our project a star!"
+                }}
+              </p>
+              <a
+                href="https://github.com/cozease/tencent-hackathon"
+                target="_blank"
+                class="github-button"
+                @click="playButtonSound()"
+              >
+                <UIcon name="i-lucide-github" />
+                <span>{{
+                  locale === "zh"
+                    ? "访问 GitHub 仓库"
+                    : "Visit GitHub Repository"
+                }}</span>
+                <UIcon name="i-lucide-external-link" class="external-icon" />
+              </a>
+            </section>
           </div>
         </div>
       </div>
@@ -879,6 +982,262 @@ const handleReset = () => {
 
   .reset-modal {
     margin: 1rem;
+  }
+}
+
+/* 关于弹窗样式 */
+.about-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.about-modal {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 30, 40, 0.98) 0%,
+    rgba(40, 40, 55, 0.95) 100%
+  );
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 650px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 100px rgba(74, 222, 128, 0.1),
+    inset 0 0 30px rgba(74, 222, 128, 0.05);
+  animation: modalBounceIn 0.4s ease-out;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: scale(1.1);
+}
+
+.about-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.about-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.title-green {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(74, 222, 128, 0.5);
+}
+
+.title-white {
+  color: white;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.about-content {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.about-section {
+  margin-bottom: 2rem;
+}
+
+.about-intro {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: justify;
+}
+
+.about-mission {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 1rem;
+  background: rgba(74, 222, 128, 0.08);
+  border-left: 3px solid rgba(74, 222, 128, 0.5);
+  border-radius: 8px;
+  text-align: justify;
+}
+
+.team-section {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.team-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #4ade80;
+  margin-bottom: 1rem;
+}
+
+.team-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.github-section {
+  text-align: center;
+}
+
+.github-text {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 1.5rem;
+}
+
+.github-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.8rem;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.github-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.github-button:hover {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.github-button:hover::before {
+  left: 100%;
+}
+
+.external-icon {
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+/* 滚动条样式 */
+.about-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.about-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.about-modal::-webkit-scrollbar-thumb {
+  background: rgba(74, 222, 128, 0.3);
+  border-radius: 4px;
+}
+
+.about-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 222, 128, 0.5);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .about-modal {
+    padding: 2rem;
+    max-width: 95%;
+  }
+
+  .about-title {
+    font-size: 2rem;
+  }
+
+  .about-intro {
+    font-size: 1rem;
+  }
+
+  .team-name {
+    font-size: 1.1rem;
+  }
+
+  .github-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+@keyframes modalBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 </style>

@@ -150,9 +150,10 @@ video.card-media {
 
 /* 收集弹窗中的样式 */
 .toast-image {
-  width: 80px !important;
-  height: 120px !important;
-  object-fit: contain;
+  width: 50px !important;
+  height: 75px !important;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 /* 未解锁卡片图片样式 */

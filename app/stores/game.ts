@@ -47,9 +47,12 @@ export const useGameStore = defineStore("game", () => {
         try {
           const collectionData = JSON.parse(collectionStored);
           collectedCards.value = collectionData.collectedCards || [];
+          console.log("Loaded collected cards:", collectedCards.value); // 调试日志
         } catch (e) {
           console.error("Failed to load collection state:", e);
         }
+      } else {
+        console.log("No collection data found in localStorage");
       }
     }
   };
@@ -73,6 +76,7 @@ export const useGameStore = defineStore("game", () => {
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(COLLECTION_KEY, JSON.stringify(collectionData));
+      console.log("Saved collected cards:", collectedCards.value); // 调试日志
     }
   };
 
@@ -100,6 +104,14 @@ export const useGameStore = defineStore("game", () => {
         newlyUnlockedCards.value.push(cardName);
         newlyUnlockedCardsInfo.value.push({ id: cardId, name: cardName });
       }
+      // 手动触发保存以确保立即持久化
+      saveCollectionToStorage();
+      console.log(
+        "Added card:",
+        cardId,
+        "Total cards:",
+        collectedCards.value.length
+      );
       return true; // 返回true表示新收集
     }
     return false; // 返回false表示已收集过
@@ -165,8 +177,10 @@ export const useGameStore = defineStore("game", () => {
     saveCollectionToStorage(); // 保存收集状态
   };
 
-  // 初始化时加载数据
-  loadFromStorage();
+  // 初始化时加载数据（仅在客户端）
+  if (typeof window !== "undefined") {
+    loadFromStorage();
+  }
 
   return {
     // 状态
