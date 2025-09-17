@@ -8,11 +8,14 @@
     "stamina": "Stamina",
     "staminaExhausted": "Your stamina is exhausted. You need to rest.",
     "reviewTitle": "Adventure Review",
-    "reviewSubtitle": "Your Forest Story",
+    "reviewSubtitle": "Your Story with the Forest",
     "reviewGenerating": "Generating your personalized adventure review...",
     "reviewError": "An error occurred while generating the review. Please try again later.",
     "reviewCopied": "Review has been copied to clipboard. You can share it with friends now!",
-    "reviewCopyFailed": "Failed to copy. Please copy the content manually."
+    "reviewCopyFailed": "Failed to copy. Please copy the content manually.",
+    "reviewCopiedShort": "Copied",
+    "reviewCopyFailedShort": "Copy failed",
+    "unlockedCards": "Cards Newly Unlocked This Journey"
   },
   "buttons": {
     "startGame": "Start Game",
@@ -21,7 +24,9 @@
     "about": "About",
     "resetGame": "Reset Game",
     "back": "Back",
-    "share": "Share"
+    "share": "Share",
+    "muteMusic": "Mute",
+    "unmuteMusic": "Unmute"
   },
   "reset": {
     "title": "Confirm Reset",

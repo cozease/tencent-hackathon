@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from "vue";
 import { useGameStore } from "~/stores/game";
 
 // 消息类型定义
@@ -84,6 +84,12 @@ const currentEvent = ref<GameEvent | null>(null);
 const currentBackgroundSight = ref<string>("start");
 const showEventImage = ref(false);
 
+// 背景音乐控制
+const bgMusic = ref<HTMLAudioElement | null>(null);
+const currentBgmSight = ref<string>("");
+const isMusicMuted = ref(false);
+const musicVolume = ref(0.3); // 默认音量30%
+
 // 收集弹窗状态
 const collectionToast = ref({
   show: false,
@@ -97,6 +103,9 @@ const reviewModal = ref({
   content: "",
   isLoading: false,
   error: "",
+  unlockedCards: [] as Array<{ id: number; name: string }>,
+  copySuccess: false,
+  copyMessage: "",
 });
 
 // 自动滚动到底部
@@ -112,6 +121,55 @@ const scrollToBottom = () => {
 watch(showChoices, (newVal) => {
   if (newVal) {
     scrollToBottom();
+  }
+});
+
+// 播放背景音乐
+const playBgMusic = (sight: string) => {
+  // 如果音乐已经在播放同一首，则不重复加载
+  if (
+    currentBgmSight.value === sight &&
+    bgMusic.value &&
+    !bgMusic.value.paused
+  ) {
+    return;
+  }
+
+  // 停止当前音乐
+  if (bgMusic.value) {
+    bgMusic.value.pause();
+    bgMusic.value = null;
+  }
+
+  // 创建新的音频对象
+  const audioPath = `/audio/bgm/${sight}.mp3`;
+  bgMusic.value = new Audio(audioPath);
+  bgMusic.value.loop = true;
+  bgMusic.value.volume = isMusicMuted.value ? 0 : musicVolume.value;
+
+  // 播放音乐
+  bgMusic.value.play().catch((err) => {
+    console.log("音乐播放失败:", err);
+    // 某些浏览器需要用户交互后才能播放音频
+  });
+
+  currentBgmSight.value = sight;
+};
+
+// 切换静音
+const toggleMusic = () => {
+  isMusicMuted.value = !isMusicMuted.value;
+  if (bgMusic.value) {
+    bgMusic.value.volume = isMusicMuted.value ? 0 : musicVolume.value;
+  }
+  // 保存设置到localStorage
+  localStorage.setItem("gameMusicMuted", String(isMusicMuted.value));
+};
+
+// 监听背景切换，自动切换音乐
+watch(currentBackgroundSight, (newSight) => {
+  if (newSight) {
+    playBgMusic(newSight);
   }
 });
 
@@ -338,9 +396,9 @@ const startGameSequence = async () => {
               1000
             );
 
-            // 开始事件序列
-            setTimeout(() => {
-              startEventSequence();
+            // 跳转到事件10
+            setTimeout(async () => {
+              await showEvent(10);
             }, 2000);
           },
         },
@@ -357,15 +415,15 @@ const startGameSequence = async () => {
                 type: "narrator",
                 content:
                   locale.value === "zh"
-                    ? "你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！"
-                    : "You have carefully checked the equipment, everything is ready. Time to start your exploration journey!",
+                    ? "老张给了你一些有用的建议。带着他的指引，你踏上了探索之旅。"
+                    : "Old Zhang gave you some useful advice. With his guidance, you embark on your exploration journey.",
               },
               1000
             );
 
-            // 开始事件序列
-            setTimeout(() => {
-              startEventSequence();
+            // 跳转到事件2
+            setTimeout(async () => {
+              await showEvent(2);
             }, 2000);
           },
         },
@@ -382,15 +440,15 @@ const startGameSequence = async () => {
                 type: "narrator",
                 content:
                   locale.value === "zh"
-                    ? "你仔细检查了装备，一切准备就绪。是时候开始你的探索之旅了！"
-                    : "You have carefully checked the equipment, everything is ready. Time to start your exploration journey!",
+                    ? "你在营地附近转了转，熟悉了周围的环境。现在是时候开始真正的探索了！"
+                    : "You walked around the camp and familiarized yourself with the surroundings. Now it's time to start the real exploration!",
               },
               1000
             );
 
-            // 开始事件序列
-            setTimeout(() => {
-              startEventSequence();
+            // 跳转到事件10
+            setTimeout(async () => {
+              await showEvent(10);
             }, 2000);
           },
         },
@@ -416,12 +474,25 @@ const shareReview = () => {
       .writeText(reviewModal.value.content)
       .then(() => {
         // 显示成功提示
-        alert(
-          t("game.reviewCopied") || "回顾已复制到剪贴板，可以分享给朋友了！"
-        );
+        reviewModal.value.copySuccess = true;
+        reviewModal.value.copyMessage = t("game.reviewCopiedShort") || "已复制";
+
+        // 1秒后自动隐藏提示
+        setTimeout(() => {
+          reviewModal.value.copySuccess = false;
+          reviewModal.value.copyMessage = "";
+        }, 1000);
       })
       .catch(() => {
-        alert(t("game.reviewCopyFailed") || "复制失败，请手动复制内容");
+        reviewModal.value.copySuccess = true;
+        reviewModal.value.copyMessage =
+          t("game.reviewCopyFailedShort") || "复制失败";
+
+        // 1秒后自动隐藏提示
+        setTimeout(() => {
+          reviewModal.value.copySuccess = false;
+          reviewModal.value.copyMessage = "";
+        }, 1000);
       });
   }
 };
@@ -435,14 +506,21 @@ const generateReview = async () => {
   try {
     const journeyData = gameStore.getJourneyData();
 
+    // 保存新解锁的卡片信息用于展示
+    reviewModal.value.unlockedCards = journeyData.unlockedCardsInfo || [];
+
     interface ReviewResponse {
       success: boolean;
       review?: string;
     }
 
+    // 只发送API需要的数据（不包含卡片ID信息）
     const response = await $fetch<ReviewResponse>("/api/generate-review", {
       method: "POST",
-      body: journeyData,
+      body: {
+        journeyLog: journeyData.journeyLog,
+        unlockedGallery: journeyData.unlockedGallery,
+      },
     });
 
     if (response.success && response.review) {
@@ -496,27 +574,7 @@ const loadEvents = async () => {
 
 // 开始事件序列
 // 游戏流程：老张对话 -> 选择ABC -> 跳转到事件id=2 -> 循环(选择->结果->继续/结束) -> 事件id=1结束
-const startEventSequence = async () => {
-  if (eventsLoading.value) {
-    // 如果事件还在加载中，等待
-    await new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (!eventsLoading.value) {
-          clearInterval(checkInterval);
-          resolve(true);
-        }
-      }, 100);
-    });
-  }
-
-  if (events.value.length === 0) {
-    console.error("No events available");
-    return;
-  }
-
-  // 老张对话后跳转到id=2的事件
-  await showEvent(2);
-};
+// 删除了不再使用的startEventSequence函数
 
 // 显示事件
 const showEvent = async (eventId: number) => {
@@ -721,6 +779,21 @@ const handleEventChoice = async (choiceNum: number) => {
 
 // 组件挂载时自动开始
 onMounted(async () => {
+  // 加载音量设置
+  const savedMuted = localStorage.getItem("gameMusicMuted");
+  const savedVolume = localStorage.getItem("gameMusicVolume");
+
+  if (savedMuted !== null) {
+    isMusicMuted.value = savedMuted === "true";
+  }
+
+  if (savedVolume !== null) {
+    musicVolume.value = parseFloat(savedVolume);
+  }
+
+  // 初始播放背景音乐
+  playBgMusic(currentBackgroundSight.value);
+
   // 加载收集和事件数据
   await Promise.all([loadCollections(), loadEvents()]);
 
@@ -728,6 +801,14 @@ onMounted(async () => {
   setTimeout(() => {
     startGameSequence();
   }, 1000);
+});
+
+// 组件卸载时停止音乐
+onUnmounted(() => {
+  if (bgMusic.value) {
+    bgMusic.value.pause();
+    bgMusic.value = null;
+  }
 });
 </script>
 
@@ -789,8 +870,17 @@ onMounted(async () => {
           <button class="icon-btn" :title="$t('buttons.settings')">
             <UIcon name="i-lucide-settings" />
           </button>
-          <button class="icon-btn" title="音量">
-            <UIcon name="i-lucide-volume-2" />
+          <button
+            class="icon-btn music-toggle"
+            :class="{ muted: isMusicMuted }"
+            :title="
+              isMusicMuted ? $t('buttons.unmuteMusic') : $t('buttons.muteMusic')
+            "
+            @click="toggleMusic"
+          >
+            <UIcon
+              :name="isMusicMuted ? 'i-lucide-volume-x' : 'i-lucide-volume-2'"
+            />
           </button>
           <button
             class="lang-btn-small"
@@ -953,7 +1043,7 @@ onMounted(async () => {
               {{ $t("game.reviewTitle") || "探险回顾" }}
             </h2>
             <div class="review-subtitle">
-              {{ $t("game.reviewSubtitle") || "你的森林故事" }}
+              {{ $t("game.reviewSubtitle") || "你与森林的故事" }}
             </div>
           </div>
 
@@ -997,6 +1087,34 @@ onMounted(async () => {
               <div class="content-wrapper">
                 <p class="review-text">{{ reviewModal.content }}</p>
               </div>
+
+              <!-- 新解锁的图鉴展示 -->
+              <div
+                v-if="
+                  reviewModal.unlockedCards &&
+                  reviewModal.unlockedCards.length > 0
+                "
+                class="unlocked-cards-section"
+              >
+                <div class="unlocked-cards-title">
+                  <UIcon name="i-heroicons-sparkles" />
+                  {{ $t("game.unlockedCards") || "本次收集的图鉴" }}
+                </div>
+                <div class="unlocked-cards-grid">
+                  <div
+                    v-for="card in reviewModal.unlockedCards"
+                    :key="card.id"
+                    class="unlocked-card-item"
+                  >
+                    <img
+                      :src="`/collections/${card.id}.png`"
+                      :alt="card.name"
+                      class="unlocked-card-image"
+                      @error="(e) => (e.target as HTMLImageElement).src = '/collections/placeholder.png'"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1010,18 +1128,25 @@ onMounted(async () => {
               <UIcon name="i-heroicons-home" />
               {{ $t("buttons.back") || "回到首页" }}
             </button>
-            <button
-              v-if="
-                !reviewModal.isLoading &&
-                !reviewModal.error &&
-                reviewModal.content
-              "
-              class="review-button secondary"
-              @click="shareReview()"
-            >
-              <UIcon name="i-heroicons-share" />
-              {{ $t("buttons.share") || "分享" }}
-            </button>
+            <div class="share-button-wrapper">
+              <button
+                v-if="
+                  !reviewModal.isLoading &&
+                  !reviewModal.error &&
+                  reviewModal.content
+                "
+                class="review-button secondary"
+                @click="shareReview()"
+              >
+                <UIcon name="i-heroicons-share" />
+                {{ $t("buttons.share") || "分享" }}
+              </button>
+              <Transition name="copy-fade">
+                <span v-if="reviewModal.copySuccess" class="copy-message">
+                  {{ reviewModal.copyMessage }}
+                </span>
+              </Transition>
+            </div>
           </div>
         </div>
       </div>
@@ -1248,6 +1373,22 @@ onMounted(async () => {
 
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* 音量按钮样式 */
+.music-toggle {
+  transition: all 0.3s ease;
+}
+
+.music-toggle.muted {
+  opacity: 0.6;
+  background: rgba(255, 100, 100, 0.1);
+  border-color: rgba(255, 100, 100, 0.3);
+}
+
+.music-toggle.muted:hover {
+  background: rgba(255, 100, 100, 0.2);
+  opacity: 1;
 }
 
 /* 语言切换按钮 */
@@ -2379,6 +2520,96 @@ onMounted(async () => {
   letter-spacing: 0.3px;
 }
 
+/* 新解锁的图鉴展示 */
+.unlocked-cards-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.unlocked-cards-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #22c55e;
+  margin-bottom: 1.2rem;
+  text-align: center;
+  justify-content: center;
+  text-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+}
+
+.unlocked-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  padding: 0.5rem;
+  max-width: 100%;
+  justify-items: center;
+}
+
+.unlocked-card-item {
+  display: block;
+  animation: cardFadeIn 0.6s ease-out;
+  animation-fill-mode: both;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.unlocked-card-item:hover {
+  transform: translateY(-3px);
+}
+
+.unlocked-card-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.unlocked-card-item:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.unlocked-card-item:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.unlocked-card-item:nth-child(4) {
+  animation-delay: 0.25s;
+}
+.unlocked-card-item:nth-child(5) {
+  animation-delay: 0.3s;
+}
+.unlocked-card-item:nth-child(6) {
+  animation-delay: 0.35s;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.unlocked-card-image {
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%);
+  border: 2px solid rgba(34, 197, 94, 0.2);
+  display: block;
+}
+
+.unlocked-card-item:hover .unlocked-card-image {
+  transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
 /* 页脚 */
 .review-footer {
   position: relative;
@@ -2391,6 +2622,61 @@ onMounted(async () => {
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0.7) 100%
   );
+}
+
+.share-button-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.copy-message {
+  font-size: 0.85rem;
+  color: #22c55e;
+  white-space: nowrap;
+  animation: fadeInOut 1s ease-in-out;
+  position: absolute;
+  left: calc(100% + 0.75rem);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* 复制消息动画 */
+.copy-fade-enter-active {
+  transition: all 0.2s ease-out;
+}
+
+.copy-fade-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.copy-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-10px);
+}
+
+.copy-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-50%) translateX(10px);
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .footer-decoration {
@@ -2510,6 +2796,33 @@ onMounted(async () => {
     justify-content: center;
   }
 
+  .share-button-wrapper {
+    width: 100%;
+    position: relative;
+  }
+
+  .share-button-wrapper .review-button {
+    width: 100%;
+  }
+
+  .copy-message {
+    position: fixed;
+    left: 50%;
+    top: auto;
+    bottom: 100px;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .copy-fade-enter-from {
+    transform: translateX(-50%) translateY(10px);
+  }
+
+  .copy-fade-leave-to {
+    transform: translateX(-50%) translateY(-10px);
+  }
+
   .review-decoration-top {
     width: 150px;
     height: 150px;
@@ -2546,6 +2859,27 @@ onMounted(async () => {
 
   .error-message {
     font-size: 0.9rem;
+  }
+
+  /* 图鉴展示响应式 */
+  .unlocked-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.25rem;
+  }
+
+  .unlocked-cards-title {
+    font-size: 1rem;
+  }
+
+  .unlocked-card-image {
+    max-width: 100px;
+    border-radius: 6px;
+  }
+
+  .unlocked-cards-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
   }
 }
 </style>

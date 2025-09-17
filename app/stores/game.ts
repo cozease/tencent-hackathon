@@ -6,6 +6,11 @@ interface JourneyEvent {
   choice: string;
 }
 
+interface UnlockedCardInfo {
+  id: number;
+  name: string;
+}
+
 export const useGameStore = defineStore("game", () => {
   // 状态定义
   const coins = ref<number>(0);
@@ -15,7 +20,8 @@ export const useGameStore = defineStore("game", () => {
 
   // 本次游戏的历程记录
   const currentJourney = ref<JourneyEvent[]>([]);
-  const newlyUnlockedCards = ref<string[]>([]); // 本次游戏新解锁的卡片名称
+  const newlyUnlockedCards = ref<string[]>([]); // 本次游戏新解锁的卡片名称（用于API）
+  const newlyUnlockedCardsInfo = ref<UnlockedCardInfo[]>([]); // 本次游戏新解锁的卡片完整信息
 
   // 持久化存储的 key
   const STORAGE_KEY = "game_state";
@@ -114,9 +120,10 @@ export const useGameStore = defineStore("game", () => {
     // 背包功能暂时禁用，仅添加到收集系统
     if (cardId > 0 && !collectedCards.value.includes(cardId)) {
       collectedCards.value.push(cardId);
-      // 记录新解锁的卡片名称
+      // 记录新解锁的卡片信息
       if (cardName) {
         newlyUnlockedCards.value.push(cardName);
+        newlyUnlockedCardsInfo.value.push({ id: cardId, name: cardName });
       }
       return true; // 返回true表示新收集
     }
@@ -178,12 +185,14 @@ export const useGameStore = defineStore("game", () => {
   const clearJourney = () => {
     currentJourney.value = [];
     newlyUnlockedCards.value = [];
+    newlyUnlockedCardsInfo.value = [];
   };
 
   const getJourneyData = () => {
     return {
       journeyLog: [...currentJourney.value],
-      unlockedGallery: [...newlyUnlockedCards.value],
+      unlockedGallery: [...newlyUnlockedCards.value], // 名称数组（用于API）
+      unlockedCardsInfo: [...newlyUnlockedCardsInfo.value], // 完整信息（用于展示）
     };
   };
 
@@ -208,6 +217,7 @@ export const useGameStore = defineStore("game", () => {
     collectedCards,
     currentJourney,
     newlyUnlockedCards,
+    newlyUnlockedCardsInfo,
 
     // 方法
     addCoins,

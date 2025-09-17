@@ -8,11 +8,14 @@
     "stamina": "体力",
     "staminaExhausted": "你的体力已经耗尽，需要休息一下了。",
     "reviewTitle": "探险回顾",
-    "reviewSubtitle": "你的森林故事",
+    "reviewSubtitle": "你与森林的故事",
     "reviewGenerating": "正在生成您的专属探险回顾...",
     "reviewError": "生成回顾时出现错误，请稍后重试。",
     "reviewCopied": "回顾已复制到剪贴板，可以分享给朋友了！",
-    "reviewCopyFailed": "复制失败，请手动复制内容"
+    "reviewCopyFailed": "复制失败，请手动复制内容",
+    "reviewCopiedShort": "已复制",
+    "reviewCopyFailedShort": "复制失败",
+    "unlockedCards": "本次新解锁的图鉴"
   },
   "buttons": {
     "startGame": "开始游戏",
@@ -21,7 +24,9 @@
     "about": "关于",
     "resetGame": "重置游戏",
     "back": "返回",
-    "share": "分享"
+    "share": "分享",
+    "muteMusic": "静音",
+    "unmuteMusic": "开启音乐"
   },
   "reset": {
     "title": "确认重置",
