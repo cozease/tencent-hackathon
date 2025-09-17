@@ -173,7 +173,7 @@ const handleReset = () => {
           <!-- 游戏Logo占位区域 -->
           <div class="logo-placeholder mb-12">
             <div class="logo-box mx-auto">
-              <img src="/logo.png" alt="绿野寻踪" class="logo-image" />
+              <img src="/logo.png" alt="寻踪" class="logo-image" />
             </div>
             <p class="mt-4 text-lg opacity-90">
               {{ $t("game.slogan") }}
