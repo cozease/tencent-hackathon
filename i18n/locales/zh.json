@@ -14,9 +14,11 @@
     "reviewCopied": "回顾已复制到剪贴板，可以分享给朋友了！",
     "reviewCopyFailed": "复制失败，请手动复制内容",
     "reviewCopiedShort": "已复制",
-    "reviewCopyFailedShort": "复制失败",
-    "unlockedCards": "本次新解锁的图鉴",
-    "wisdomQuote": "所有选择都是正确的，只要你还记得为什么出发。"
+      "reviewCopyFailedShort": "复制失败",
+      "unlockedCards": "本次新解锁的图鉴",
+      "wisdomQuote": "所有选择都是正确的，只要你还记得为什么出发。",
+      "generateReview": "生成探险回顾",
+      "generateReviewDesc": "查看本次探险的精彩回顾"
   },
   "buttons": {
     "startGame": "开始游戏",

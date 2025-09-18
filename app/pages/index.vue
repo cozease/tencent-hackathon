@@ -332,7 +332,7 @@ const handleReset = () => {
               <p class="about-intro">
                 {{
                   locale === "zh"
-                    ? "寻踪 是一款基于 Nuxt.js 构建的文字冒险和收集养成游戏。玩家在游戏中扮演一名深入神秘森林的探索者，通过一系列选择与森林互动，邂逅各种野生动植物，并最终解锁关于这片土地秘密的个性化回忆。"
+                    ? "寻 踪 是一款基于 Nuxt.js 构建的文字冒险和收集养成游戏。玩家在游戏中扮演一名深入神秘森林的探索者，通过一系列选择与森林互动，邂逅各种野生动植物，并最终解锁关于这片土地秘密的个性化回忆。"
                     : "Oroqen's Path is a text adventure and collection game built with Nuxt.js. Players take on the role of an explorer venturing into mysterious forests, interacting through choices, encountering wildlife, and ultimately unlocking personalized memories about the land's secrets."
                 }}
               </p>

@@ -672,8 +672,25 @@ const showEvent = async (eventId: number) => {
   const isEndingEvent = [1, 13, 14].includes(event.id);
 
   if (isEndingEvent) {
-    // 生成并显示行程回顾
-    await generateReview();
+    // 显示生成回顾的选项
+    const endingChoices: Choice[] = [
+      {
+        id: "generate-review",
+        label: t("game.generateReview") || "生成探险回顾",
+        description: t("game.generateReviewDesc") || "查看本次探险的精彩回顾",
+        action: async () => {
+          showChoices.value = false;
+          // 生成并显示行程回顾
+          await generateReview();
+        },
+      },
+    ];
+
+    // 延迟显示选项，让玩家有时间阅读尾声
+    setTimeout(() => {
+      currentChoices.value = endingChoices;
+      showChoices.value = true;
+    }, 1500);
   } else if (event.choice1 && event.choice1 !== "0") {
     // 显示选项
     const choices: Choice[] = [];

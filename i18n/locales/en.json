@@ -16,7 +16,9 @@
     "reviewCopiedShort": "Copied",
     "reviewCopyFailedShort": "Copy failed",
     "unlockedCards": "Cards Newly Unlocked This Journey",
-    "wisdomQuote": "All choices are correct, as long as you remember why you set out."
+    "wisdomQuote": "All choices are correct, as long as you remember why you set out.",
+    "generateReview": "Generate Adventure Review",
+    "generateReviewDesc": "View the highlights of your adventure"
   },
   "buttons": {
     "startGame": "Start Game",
